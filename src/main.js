@@ -9,7 +9,6 @@ async function main(so){
 	customElements.define("mize-first", first);
 	const mize = document.getElementById("mize")
 	const item_element = document.createElement("mize-first");
-	console.log(item_element)
 	mize.appendChild(item_element)
 
 	// testing
@@ -18,22 +17,28 @@ async function main(so){
 	//number_array.push(n / 256)
 	//number_array.push(n % 256)
 
-	let num_u8 = new Uint8Array([1,2,0,0,0,0,0,0,2,5,3])
-	so.send(num_u8)
+	//let num_u8 = new Uint8Array([1,1,0,0,0,0,0,0,0,0])
+	//so.send(num_u8)
+	let bytes = u64_to_be_bytes(12345678)
+	let number = be_bytes_to_u64(new Uint8Array(bytes))
+	console.log("Bytes: " + bytes)
+	console.log("Num: " + number)
 }
 
 
 async function handle_message(message){	
 	const version = message[0]
 	const cmd = message[1]
-	console.log("CMD: " + cmd)
+
+	//console.log("CMD: " + cmd)
+	//console.log("MSG: " + message)
 
 	switch(cmd){
 		case 1:
 			break;
 
 		case 2:
-			const id = convert_to_num(message.slice(2, 10))
+			const id = be_bytes_to_u64(message.slice(2, 10))
 			console.log("ID: " , id)
 			break;
 
@@ -82,9 +87,8 @@ document.addEventListener("DOMContentLoaded", () =>{
 	}
 })
 
-function convert_to_num(bytes){
+function be_bytes_to_u64(bytes){
 	bytes = bytes.reverse()
-	console.log(bytes)
 	let count = 0
 	let num = 0
 	for (i of bytes) {
@@ -94,7 +98,28 @@ function convert_to_num(bytes){
 	return num;
 }
 
-function convert_to_bytes(num){
+function u64_to_be_bytes(num){
+	//let bytes = new Uint8Array([]);
+	let bytes = []
+
+	//compute digits
+	while (true){
+		let digit = num % 256
+
+		if (digit == 0 ){
+			break
+		}
+
+		bytes.push(digit)
+		num = (num - digit) / 256
+	}
+
+	//fill array with 0s
+	while (bytes.length < 8){
+		bytes.push(0)
+	}
+
+	return new Uint8Array(bytes.reverse())
 }
 
 
