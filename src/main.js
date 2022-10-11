@@ -1,5 +1,5 @@
 
-
+pr = console.log
 
 async function main(so){
 
@@ -11,18 +11,8 @@ async function main(so){
 	const item_element = document.createElement("mize-first");
 	mize.appendChild(item_element)
 
-	// testing
-	//let n = 832
-	//let number_array = []
-	//number_array.push(n / 256)
-	//number_array.push(n % 256)
-
-	//let num_u8 = new Uint8Array([1,1,0,0,0,0,0,0,0,0])
-	//so.send(num_u8)
-	let bytes = u64_to_be_bytes(12345678)
-	let number = be_bytes_to_u64(new Uint8Array(bytes))
-	console.log("Bytes: " + bytes)
-	console.log("Num: " + number)
+	let num_u8 = new Uint8Array([1,1,0,0,0,0,0,0,0,0])
+	so.send(num_u8)
 }
 
 
@@ -38,8 +28,40 @@ async function handle_message(message){
 			break;
 
 		case 2:
-			const id = be_bytes_to_u64(message.slice(2, 10))
-			console.log("ID: " , id)
+			const id = from_be_bytes(message.slice(2, 10))
+			const num_of_fields = from_be_bytes(message.slice(10, 14))
+			let item_u8 = []
+			let item = []
+
+			let index = 14
+			let fields = 0
+			while (fields < num_of_fields) {
+				const key_len = from_be_bytes(message.slice(index + 0, index + 4))
+				const key = message.slice(index + 4, index + 4 + key_len)
+
+				index += 4 + key_len
+
+				const val_len = from_be_bytes(message.slice(index + 0, index + 4))
+				const val = message.slice(index + 4, index + 4 + val_len)
+
+				const key_str = String.fromCharCode.apply(null, key);
+				const val_str = String.fromCharCode.apply(null, val);
+
+				item_u8.push([key, val])
+				item.push([key_str, val_str])
+
+				index += 4 + val_len
+
+				fields += 1
+			}
+			for (f of item) {
+				//console.log(f)
+				console.log("Key: ", f[0])
+				console.log("Val: ", f[1])
+			}
+
+			//console.log("num_of_fields: " + num_of_fields)
+			//console.log("ID: " , id)
 			break;
 
 		case 3:
@@ -87,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () =>{
 	}
 })
 
-function be_bytes_to_u64(bytes){
+function from_be_bytes(bytes){
 	bytes = bytes.reverse()
 	let count = 0
 	let num = 0
@@ -123,5 +145,28 @@ function u64_to_be_bytes(num){
 }
 
 
+function u32_to_be_bytes(num){
+	//let bytes = new Uint8Array([]);
+	let bytes = []
+
+	//compute digits
+	while (true){
+		let digit = num % 256
+
+		if (digit == 0 ){
+			break
+		}
+
+		bytes.push(digit)
+		num = (num - digit) / 256
+	}
+
+	//fill array with 0s
+	while (bytes.length < 4){
+		bytes.push(0)
+	}
+
+	return new Uint8Array(bytes.reverse())
+}
 
 
