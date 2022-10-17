@@ -16,7 +16,7 @@ async function main(so){
 		ob: first,
 	})
 	let id = parseInt(location.pathname.slice(1))
-	if (location.pathname == "/") {id = 1}
+	if (location.pathname == "/") {id = 0}
 	if (id == NaN) {pr("id is NaN"); id = 0}
 
 	customElements.define("mize-first", first);
