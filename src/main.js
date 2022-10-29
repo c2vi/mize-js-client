@@ -147,16 +147,12 @@ async function handle_message(message){
 			break;
 
 		case 10:
-			decoder = new TextDecoder()
 			let id_update = from_be_bytes(message.slice(2,10))
 			let num_of_updates = from_be_bytes(message.slice(10, 14))
 			let i = 0
 			let index_update = 14
 			const [render_update] = renders.filter( render => render.item_id == id_update)
-			let new_item = {
-				u8: Array.from(render_update.ob.item.u8),
-				str: Array.from(render_update.ob.item.str),
-			}
+			let item = render_update.ob.item
 			while (i < num_of_updates) {
 
 				//get key_len
@@ -165,80 +161,74 @@ async function handle_message(message){
 
 				//get key
 				let key = new Uint8Array(message.slice(index_update, index_update + key_len))
-				let key_str = decoder.decode(key)
+				let key_str = mize.decoder.decode(key)
+				const [field] = item.fields.filter(field => field.key == key_str)
 				index_update += key_len
 
 				//get update_len
 				let update_len = from_be_bytes(message.slice(index_update, index_update + 4))
+				index_update += 4
 				
 				//apply for key
-				let new_val = []
-				while (true) {
+				const index_update_here = index_update
+				while (index_update - index_update_here < update_len) {
 					let b = message[index_update]
 					index_update += 1
-					if (b == undefined) {break}
 
 					//replace
 					if (b == 0){
+//						pr("replace")
 						const start = from_be_bytes(message.slice(index_update, index_update + 4))
 						const stop = from_be_bytes(message.slice(index_update +4, index_update + 8))
 						index_update += 8
 
-						const [field] = render_update.ob.item.u8.filter( field => {
-							let count = 0
-							while (true){
-								if (field[0][count] == undefined) {break}
-								if (key[count] == undefined) {break}
-								if (field[0][count] != key[count]) {return}
-								count += 1
-							}
-							return true
-						})
-
-						new_val = [
-							...field[1].slice(0, start),
+						let new_val = [
+							...field.raw[1].slice(0, start),
 							...message.slice(index_update, index_update + stop-start),
-							...field[1].slice(stop, -1)
+							...field.raw[1].slice(start, -1)
 						]
+//						pr("insert - new_val", new_val)
+						field.raw[1] = new Uint8Array(new_val)
+						index_update += stop-start
+
 
 					//insert
 					} else if (b == 1){
+//						pr("insert")
 						const start = from_be_bytes(message.slice(index_update, index_update + 4))
 						const stop = from_be_bytes(message.slice(index_update +4, index_update + 8))
 						index_update += 8
+
+						let new_val = [
+							...field.raw[1].slice(0, start),
+							...message.slice(index_update, index_update + stop-start),
+							...field.raw[1].slice(start, -1)
+						]
+//						pr("insert - new_val", new_val)
+						field.raw[1] = new Uint8Array(new_val)
+						index_update += stop-start
 
 
 					//delete
 					} else if (b == 2){
+//						pr("delete")
 						const start = from_be_bytes(message.slice(index_update, index_update + 4))
 						const stop = from_be_bytes(message.slice(index_update +4, index_update + 8))
 						index_update += 8
 
+						let new_val = [
+							...field.raw[1].slice(0, start),
+							...field.raw[1].slice(stop, -1)
+						]
+//						pr("new_val", new_val)
+						field.raw[1] = new Uint8Array(new_val)
 
 					} else {break}
-					break
 
-					index_update += 1
 				}
 				i +=1
-
-				//u8
-				for (let i = 0; i < new_item.u8.length; i++){
-					while (true){
-						if (new_item.u8[i][0][count] == undefined) {break}
-						if (key[count] == undefined) {break}
-						if (new_item.u8[i][0][count] != key[count]) {new_item.u8[i][1] = new_val}
-						count += 1
-					}
-					pr("after while loop")
-					pr("in between: ", new_item)
-				}
-				pr("finished: ", new_item)
-				//str
-
 			}
-			pr(new_item.u8)
-			render_update.ob.updatedItemCallback(new_item)
+			render_update.ob.getItemCallback(render_update.ob.item)
 			break;
 
 		case 11:
