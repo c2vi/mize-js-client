@@ -234,7 +234,12 @@ async function handle_message(message){
 		case 11:
 			break;
 
-		case 12:
+		case 17:
+			//error
+			const json_string = mize.decoder.decode(message.slice(2))
+			pr(json_string)
+			const err = JSON.parse(json_string)
+			console.log("ERROR: ", err)
 			break;
 
 	}
