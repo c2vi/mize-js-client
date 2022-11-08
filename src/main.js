@@ -27,9 +27,11 @@ async function main(so){
 		id: "first",
 		ob: first,
 	})
-	let id = parseInt(location.pathname.slice(1))
-	if (location.pathname == "/") {id = 0}
-	if (id == NaN) {pr("id is NaN"); id = 0}
+	//let id = parseInt(location.pathname.slice(1))
+	let id = location.pathname.slice(1)
+	if (location.pathname == "/") {id = "0"}
+	if (id == NaN) {pr("id is NaN"); id = "0"}
+	pr("id: ", id);
 
 	customElements.define("mize-first", first);
 	const mize = document.getElementById("mize")
@@ -42,7 +44,7 @@ async function main(so){
 	item_element.so = so
 	mize.appendChild(item_element)
 
-	let num_u8 = new Uint8Array([1,1])
+	let num_u8 = new Uint8Array([1,15])
 	num_u8 = new Uint8Array([...num_u8, ...u64_to_be_bytes(id)])
 	so.send(num_u8)
 
@@ -95,14 +97,30 @@ async function handle_message(message){
 			break;
 
 		case 2:
-			let id = from_be_bytes(message.slice(2, 10))
-			const num_of_fields = from_be_bytes(message.slice(10, 14))
+
+			//get the id
+			id_string = ""
+			let ch = 0;
+			let index = 2
+			while (ch != 47 && index < 2000) {
+				ch = message[index]
+				pr("ch", ch)
+				if (ch == 47){break}
+				id_string += String.fromCharCode(ch)
+				index += 1
+			}
+			if (index > 2000) {pr("there is no '/' after the id")}
+			//skip the "/"
+			index += 1
+
+
+			let num_of_fields = from_be_bytes(message.slice(index, index +4))
+			index += 4
 
 			let raw = []
 
-			let index = 14
 			let fields = 0
-			while (fields < num_of_fields) {
+			while (fields < num_of_fields && fields < 10000) {
 				const key_len = from_be_bytes(message.slice(index + 0, index + 4))
 				const key = message.slice(index + 4, index + 4 + key_len)
 
@@ -119,8 +137,8 @@ async function handle_message(message){
 			}
 
 			//set item on render
-			let [render] = renders.filter( (render) => render.item_id == id)
-			render.ob.getItemCallback(new Item(id, raw))
+			let [render] = renders.filter( (render) => render.item_id == id_string)
+			render.ob.getItemCallback(new Item(id_string, raw))
 
 			
 			break;
@@ -147,10 +165,28 @@ async function handle_message(message){
 			break;
 
 		case 10:
-			let id_update = from_be_bytes(message.slice(2,10))
-			let num_of_updates = from_be_bytes(message.slice(10, 14))
+			pr("got update message")
+
+			//get the id
+			id_update = ""
+			let ch_update = 0;
+			let index_update = 2
+			while (ch_update != 47 && index_update < 2000) {
+				ch_update = message[index_update]
+				if (ch_update == 47){break}
+				id_update += String.fromCharCode(ch_update)
+				index_update += 1
+			}
+			if (index_update > 2000) {pr("there is no '/' after the id")}
+			//skip the "/"
+			index_update += 1
+
+
+			let num_of_updates = from_be_bytes(message.slice(index_update, index_update +4))
+			index_update += 4
+
 			let i = 0
-			let index_update = 14
+
 			const [render_update] = renders.filter( render => render.item_id == id_update)
 			let item = render_update.ob.item
 			while (i < num_of_updates) {
@@ -168,6 +204,7 @@ async function handle_message(message){
 				//get update_len
 				let update_len = from_be_bytes(message.slice(index_update, index_update + 4))
 				index_update += 4
+
 				
 				//apply for key
 				const index_update_here = index_update
@@ -228,6 +265,7 @@ async function handle_message(message){
 				}
 				i +=1
 			}
+			pr(render_update.ob.item)
 			render_update.ob.getItemCallback(render_update.ob.item)
 			break;
 
