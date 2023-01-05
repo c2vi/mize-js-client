@@ -4,12 +4,13 @@ pr = console.log
 mize = {}
 mize.encoder = new TextEncoder()
 mize.decoder = new TextDecoder()
+encoder = new TextEncoder()
 
 let render_classes = []
 let renders= []
 
 document.addEventListener("DOMContentLoaded", () =>{
-	const so = new WebSocket("ws://localhost:3000/$api/socket")
+	const so = new WebSocket("ws://" + location.host + "/$api/socket")
 	so.onopen = () => {
 		so.onmessage = async (message) => {
 			handle_message(new Uint8Array(await message.data.arrayBuffer()))
@@ -34,7 +35,7 @@ async function main(so){
 	pr("id: ", id);
 
 	customElements.define("mize-first", first);
-	const mize = document.getElementById("mize")
+	const mize_element = document.getElementById("mize")
 	const item_element = document.createElement("mize-first");
 	renders.push({
 		render_id: "first",
@@ -42,12 +43,11 @@ async function main(so){
 		item_id: id,
 	})
 	item_element.so = so
-	mize.appendChild(item_element)
+	mize_element.appendChild(item_element)
 
 	let num_u8 = new Uint8Array([1,15])
-	num_u8 = new Uint8Array([...num_u8, ...u64_to_be_bytes(id)])
+	num_u8 = new Uint8Array([...num_u8, ...mize.encoder.encode(id), 47])
 	so.send(num_u8)
-
 }
 
 class Item{
@@ -104,12 +104,11 @@ async function handle_message(message){
 			let index = 2
 			while (ch != 47 && index < 2000) {
 				ch = message[index]
-				pr("ch", ch)
 				if (ch == 47){break}
 				id_string += String.fromCharCode(ch)
 				index += 1
 			}
-			if (index > 2000) {pr("there is no '/' after the id")}
+			if (index >= 2000) {pr("there is no '/' after the id")}
 			//skip the "/"
 			index += 1
 
@@ -212,9 +211,9 @@ async function handle_message(message){
 					let b = message[index_update]
 					index_update += 1
 
+
 					//replace
 					if (b == 0){
-//						pr("replace")
 						const start = from_be_bytes(message.slice(index_update, index_update + 4))
 						const stop = from_be_bytes(message.slice(index_update +4, index_update + 8))
 						index_update += 8
@@ -224,14 +223,12 @@ async function handle_message(message){
 							...message.slice(index_update, index_update + stop-start),
 							...field.raw[1].slice(start, -1)
 						]
-//						pr("insert - new_val", new_val)
 						field.raw[1] = new Uint8Array(new_val)
 						index_update += stop-start
 
 
 					//insert
 					} else if (b == 1){
-//						pr("insert")
 						const start = from_be_bytes(message.slice(index_update, index_update + 4))
 						const stop = from_be_bytes(message.slice(index_update +4, index_update + 8))
 						index_update += 8
@@ -241,14 +238,12 @@ async function handle_message(message){
 							...message.slice(index_update, index_update + stop-start),
 							...field.raw[1].slice(start, -1)
 						]
-//						pr("insert - new_val", new_val)
 						field.raw[1] = new Uint8Array(new_val)
 						index_update += stop-start
 
 
 					//delete
 					} else if (b == 2){
-//						pr("delete")
 						const start = from_be_bytes(message.slice(index_update, index_update + 4))
 						const stop = from_be_bytes(message.slice(index_update +4, index_update + 8))
 						index_update += 8
@@ -257,7 +252,6 @@ async function handle_message(message){
 							...field.raw[1].slice(0, start),
 							...field.raw[1].slice(stop, -1)
 						]
-//						pr("new_val", new_val)
 						field.raw[1] = new Uint8Array(new_val)
 
 					} else {break}
@@ -265,7 +259,6 @@ async function handle_message(message){
 				}
 				i +=1
 			}
-			pr(render_update.ob.item)
 			render_update.ob.getItemCallback(render_update.ob.item)
 			break;
 
@@ -275,7 +268,6 @@ async function handle_message(message){
 		case 17:
 			//error
 			const json_string = mize.decoder.decode(message.slice(2))
-			pr(json_string)
 			const err = JSON.parse(json_string)
 			console.log("ERROR: ", err)
 			break;
