@@ -4,6 +4,9 @@ pr = console.log
 mize = {}
 mize.encoder = new TextEncoder()
 mize.decoder = new TextDecoder()
+mize.defineRender = (render_class) => {
+	mize.new_render = render_class
+}
 encoder = new TextEncoder()
 
 let render_classes = []
@@ -20,9 +23,15 @@ document.addEventListener("DOMContentLoaded", () =>{
 })
 
 async function main(so){
+
 	//get render
-	let first = await import("/==api==/render/first")
-	first = first.First
+	let res = await fetch("/==api==/render/react-test")
+	let script = await res.text()
+	eval(script)
+//	first = first.First
+
+
+	let first = mize.new_render
 
 	render_classes.push({
 		id: "first",
@@ -32,7 +41,6 @@ async function main(so){
 	let id = location.pathname.slice(1)
 	if (location.pathname == "/") {id = "0"}
 	if (id == NaN) {pr("id is NaN"); id = "0"}
-	pr("id: ", id);
 
 	customElements.define("mize-first", first);
 	const mize_element = document.getElementById("mize")
@@ -59,6 +67,26 @@ class Item{
 		}
 		this.id = id
 	}
+
+	clone(){
+		let new_raw = []
+		for (let field of this.fields){
+			new_raw.push(field.clone(field));
+		}
+		return new Item(this.id, new_raw);
+	}
+
+	get_parsed(){
+		generate_parsed_item(this)
+	}
+
+	update(){
+		//TODO
+	}
+
+	update_raw(){
+		//TODO
+	}
 }
 
 class Field{
@@ -66,6 +94,12 @@ class Field{
 		//raw: ["key", "val"]
 		this.raw = raw
 	}
+	clone(field){
+		const key = new Uint8Array(field.raw[0])
+		const val = new Uint8Array(field.raw[1])
+		return [key, val]
+	}
+
 	get str(){
 		return [String.fromCharCode.apply(null, this.raw[0]), String.fromCharCode(null, this.raw[1])]
 	}
@@ -137,7 +171,8 @@ async function handle_message(message){
 
 			//set item on render
 			let [render] = renders.filter( (render) => render.item_id == id_string)
-			render.ob.getItemCallback(new Item(id_string, raw))
+			let item = new Item(id_string, raw)
+			render.ob.getItemCallback(item)
 
 			
 			break;
@@ -166,6 +201,7 @@ async function handle_message(message){
 		case 10:
 			pr("got update message")
 
+
 			//get the id
 			id_update = ""
 			let ch_update = 0;
@@ -187,7 +223,7 @@ async function handle_message(message){
 			let i = 0
 
 			const [render_update] = renders.filter( render => render.item_id == id_update)
-			let item = render_update.ob.item
+			let new_item = render_update.ob.item.clone()
 			while (i < num_of_updates) {
 
 				//get key_len
@@ -197,7 +233,7 @@ async function handle_message(message){
 				//get key
 				let key = new Uint8Array(message.slice(index_update, index_update + key_len))
 				let key_str = mize.decoder.decode(key)
-				const [field] = item.fields.filter(field => field.key == key_str)
+				const [field] = new_item.fields.filter(field => field.key == key_str)
 				index_update += key_len
 
 				//get update_len
@@ -259,7 +295,15 @@ async function handle_message(message){
 				}
 				i +=1
 			}
-			render_update.ob.getItemCallback(render_update.ob.item)
+			if (render_update.ob.updateCallback){
+				render_update.ob.updateCallback({
+					update_src: "got_update_msg",
+					now: new_item,
+					before: render_update.ob.item,
+				})
+			} else {
+				render_update.ob.getItemCallback(new_item)
+			}
 			break;
 
 		case 11:
@@ -275,6 +319,42 @@ async function handle_message(message){
 	}
 	//const number_array = await message.data.arrayBuffer()
 	//let arr = new Uint8Array(number_array)
+}
+
+function generate_parsed_item(item){
+
+	//TODO (Lucas)
+
+	//hard coded types
+	//every type should eventually be an item on the server.
+	//untill then: all types have to be here
+
+	types = {
+		"!UNO!Game": [
+			["players", "json_string_array"],
+			["card_in_middle", "string"],
+		],
+		"!UNO!Player": [
+			["cards_of_player", "json_string_array"],
+			["cards_to_take", "u_int"],
+		],
+		"!UNO!Main": [
+		],
+	}
+
+	//get the type from the types object
+
+	//if there is no _type in the item, take it as all strings
+
+	//return an object like the hardcoded one (without any getter or setter magic)
+	
+	//hardcoded for testing
+	return {
+		_id: "!UNO!player_0", //always string
+		_type: "!UNO!Player", //always string
+		cards_of_player: ["red_3","blue_2"], //json_string_array
+		cards_to_take: 0, //u_int
+	}
 }
 
 function from_be_bytes(bytes){
