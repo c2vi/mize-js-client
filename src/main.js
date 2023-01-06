@@ -10,7 +10,7 @@ let render_classes = []
 let renders= []
 
 document.addEventListener("DOMContentLoaded", () =>{
-	const so = new WebSocket("ws://" + location.host + "/$api/socket")
+	const so = new WebSocket("ws://" + location.host + "/==api==/socket")
 	so.onopen = () => {
 		so.onmessage = async (message) => {
 			handle_message(new Uint8Array(await message.data.arrayBuffer()))
@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () =>{
 
 async function main(so){
 	//get render
-	let first = await import("/$api/render/first")
+	let first = await import("/==api==/render/first")
 	first = first.First
 
 	render_classes.push({
