@@ -20,37 +20,64 @@ document.addEventListener("DOMContentLoaded", () =>{
 		}
 		main(so)
 	}
+
+	/////////////// client overlay ////////////////
+	const client_overlay = document.getElementById("client-overlay")
+	client_overlay.childNodes[1].onclick = mz_click
+
+	client_overlay.addEventListener("mouseenter", (e) => {
+		e.target.childNodes[1].style.display = "flex"
+	})
+
+	client_overlay.addEventListener("mouseleave", (e) => {
+		e.target.childNodes[1].style.display = "none"
+	})
+
+	function mz_click(){
+		let display = client_overlay.childNodes[3].style.display
+		pr("here ")
+		if (display == "none" || display == "") {
+			display = "block"
+		} else {
+			pr("else")
+			display = "none"
+		}
+	}
 })
+
 
 async function main(so){
 
-	//get render
-	let res = await fetch("/==api==/render/react-test")
-	let script = await res.text()
-	eval(script)
-//	first = first.First
-
-
-	let first = mize.new_render
-
-	render_classes.push({
-		id: "first",
-		ob: first,
-	})
-	//let id = parseInt(location.pathname.slice(1))
+	//get id
 	let id = location.pathname.slice(1)
 	if (location.pathname == "/") {id = "0"}
 	if (id == NaN) {pr("id is NaN"); id = "0"}
+	pr("id", id)
+	mize.id_to_render = id
 
-	customElements.define("mize-first", first);
+	//get render
+	let res = await fetch("/==api==/render/UNO-Home")
+	let script = await res.text()
+	eval(script)
+
+	let render_class = mize.new_render
+
+	render_classes.push({
+		id: "first",
+		ob: render_class,
+	})
+
+	customElements.define("mize-first", render_class);
 	const mize_element = document.getElementById("mize")
 	const item_element = document.createElement("mize-first");
+
 	renders.push({
 		render_id: "first",
 		ob: item_element,
 		item_id: id,
 	})
 	item_element.so = so
+	mize.so = so
 	mize_element.appendChild(item_element)
 
 	let num_u8 = new Uint8Array([1,15])
@@ -77,15 +104,76 @@ class Item{
 	}
 
 	get_parsed(){
-		generate_parsed_item(this)
+		return generate_parsed_item(this)
 	}
 
-	update(){
-		//TODO
+	update(parsed_item){
+		let raw_item = unparse(parsed_item);
+		this.update_raw(raw_item)
 	}
 
-	update_raw(){
-		//TODO
+	update_raw(new_item){
+
+		const component_this = e.target.parentNode.parentNode.parentNode.host
+
+		const ar = Array.from(e.target.parentNode.childNodes)
+		const [input] = ar.filter( node => node.tagName == "INPUT")
+		const [key] = Array.from(e.target.parentNode.childNodes).filter( node => node.id == "key")
+		const [val_element] = Array.from(e.target.parentNode.childNodes).filter( node => node.id == "val")
+		const field = component_this.item.fields[val_element.parentNode.field_num].val_raw
+
+
+		let answer = [1,8,
+			...mize.encoder.encode(this.id),
+			47, // a "/"
+
+			//num_of_updates
+			...u32_to_be_bytes(1),
+
+		]
+
+			
+		pr(answer)
+		component_this.so.send(new Uint8Array(answer))
+
+		for (let field of new_item) {
+			let found = this.raw.filter(new_field => {new_field.raw[0] == field.raw[0]})
+			let not_the_same = this.raw.filter(new_field => {new_field.raw[1] == field.raw[1]})
+
+			//in case there is a new key
+			if (found.length == 0){
+				pr("new-key")
+				answer = [
+					...answer,
+					//should repeat
+					...u32_to_be_bytes(field.raw[0].length),
+					...mize.encoder.encode(field.raw[0]),
+
+					//update len
+					...u32_to_be_bytes(9 + field.raw[1].length + 9),
+
+					//### update one: delete everything
+					//update cmd
+					2,
+					//start
+					...u32_to_be_bytes(0),
+					//stop
+					...u32_to_be_bytes(field.rawlength),
+
+					//### update two: add everything
+
+					//update cmd
+					1,
+					//start
+					...u32_to_be_bytes(0),
+					//stop
+					...u32_to_be_bytes(input.value.length),
+
+					...mize.encoder.encode(input.value),
+				]
+			} else if (not_the_same.length == 0) {
+			}
+		}
 	}
 }
 
@@ -321,6 +409,12 @@ async function handle_message(message){
 	//let arr = new Uint8Array(number_array)
 }
 
+function unparse(parsed_item){
+	//TODO (Lucas)
+	//the opposite from generate_parsed_item
+	//should return an object of Class Item
+}
+
 function generate_parsed_item(item){
 
 	//TODO (Lucas)
@@ -329,7 +423,7 @@ function generate_parsed_item(item){
 	//every type should eventually be an item on the server.
 	//untill then: all types have to be here
 
-	types = {
+	mize.types = {
 		"!UNO!Game": [
 			["players", "json_string_array"],
 			["card_in_middle", "string"],

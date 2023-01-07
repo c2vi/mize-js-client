@@ -6,8 +6,81 @@
 	<script src="==api==/client/main.js"></script>
 </head>
 <body>
-	<div id="client"></div>
-	<div id="mize"></div>
+	<style>
+head {
+	margin: 0;
+	padding: 0;
+	height: 0px;
+}
+html, body {
+	padding: 0px;
+	margin: 0px;
+	height: 100%;
+	min-height: 100%;
+}
 
+body {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+#MZ{
+	margin: 0;
+	text-align: center;
+	position: relative;
+}
+
+#client-overlay{
+	position: absolute;
+	height: 1.2cm;
+	width: 1.2cm;
+	top: 0;
+	right: 0;
+	font-family: Arial, Helvetica, sans-serif;
+
+}
+
+#overlay-button {
+	position: relative;
+	background-color: #e6e6e6;
+	border-left: solid 4px;
+	border-bottom: solid 4px;
+	display: none;
+	justify-content: center;
+	align-items: center;
+	height: 100%;
+	width: 100%;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+#overlay-button:active {
+	background-color: #b8b8b8;
+}
+
+#overlay-button:hover {
+	cursor: pointer;
+}
+
+#overlay-menu {
+	position: absolute;
+	right: 0.5cm;
+	top: 2cm;
+	display: block;
+}
+	</style>
+	<div id="client-overlay">
+		<button id="overlay-button">
+			<h2 id="MZ">MZ</h2>
+		</button>
+		<div id="overlay-menu">
+			<h1>hi</h1>
+		</div>
+	</div>
+	<div id="mize"></div>
 </body>
 </html>
