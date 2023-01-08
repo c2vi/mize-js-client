@@ -144,7 +144,7 @@ class Item{
 
 			
 		pr(answer)
-		component_this.so.send(new Uint8Array(answer))
+		mize.so.send(new Uint8Array(answer))
 
 		for (let field of new_item) {
 			let found = this.raw.filter(new_field => {new_field.raw[0] == field.raw[0]})
@@ -270,6 +270,7 @@ async function handle_message(message){
 			//set item on render
 			let render = mize.renders[id_string]
 			let item = new Item(id_string, raw)
+			render.ob.item = item
 			render.ob.getItemCallback(item)
 
 			
@@ -399,8 +400,10 @@ async function handle_message(message){
 					now: new_item,
 					before: render_update.ob.item,
 				})
+				render_update.ob.item = new_item
 			} else {
 				render_update.ob.getItemCallback(new_item)
+				render_update.ob.item = new_item
 			}
 			break;
 
