@@ -373,7 +373,15 @@ async function handle_message(message){
 				//get key
 				let key = new Uint8Array(message.slice(index_update, index_update + key_len))
 				let key_str = mize.decoder.decode(key)
-				const [field] = new_item.fields.filter(field => field.key == key_str)
+				let [field] = new_item.fields.filter(field => field.key == key_str)
+
+				// in case this field does not yet exist
+				if (!field){
+					pr("new_field key", key_str)
+					field = new Field([key, new Uint8Array()])
+					new_item.fields.push(field)
+				}
+
 				index_update += key_len
 
 				//get update_len
