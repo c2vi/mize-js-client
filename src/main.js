@@ -7,13 +7,15 @@ mize.decoder = new TextDecoder()
 mize.defineRender = (render_class) => {
 	mize.new_render = render_class
 }
-encoder = new TextEncoder()
-
-let render_classes = []
-let renders= []
+mize.render_classes = {}
+mize.renders = {}
+mize.change_render = async (render_id) => {
+	render(render_id)
+}
 
 document.addEventListener("DOMContentLoaded", () =>{
 	const so = new WebSocket("ws://" + location.host + "/==api==/socket")
+	mize.so = so
 	so.onopen = () => {
 		so.onmessage = async (message) => {
 			handle_message(new Uint8Array(await message.data.arrayBuffer()))
@@ -35,12 +37,10 @@ document.addEventListener("DOMContentLoaded", () =>{
 
 	function mz_click(){
 		let display = client_overlay.childNodes[3].style.display
-		pr("here ")
 		if (display == "none" || display == "") {
-			display = "block"
+			client_overlay.childNodes[3].style.display = "block"
 		} else {
-			pr("else")
-			display = "none"
+			client_overlay.childNodes[3].style.display = "none"
 		}
 	}
 })
@@ -55,34 +55,44 @@ async function main(so){
 	pr("id", id)
 	mize.id_to_render = id
 
-	//get render
-	let res = await fetch("/==api==/render/UNO-Home")
-	let script = await res.text()
-	eval(script)
+	render("first")
+}
 
-	let render_class = mize.new_render
+async function render(render_id){
+	//check if render is already in render_classes
+	const render = mize.render_classes[render_id]
+	pr("render: ", render)
+	let render_class = {}
+	if (render == undefined){
+		//get render
+		let res = await fetch("/==api==/render/" + render_id)
+		let script = await res.text()
+		eval(script)
 
-	render_classes.push({
-		id: "first",
-		ob: render_class,
-	})
+		render_class = mize.new_render
+		mize.render_classes[render_id] = {ob: render_class}
 
-	customElements.define("mize-first", render_class);
+		customElements.define("mize-" + render_id, render_class);
+	}
+
 	const mize_element = document.getElementById("mize")
-	const item_element = document.createElement("mize-first");
+	mize_element.innerHTML = ""
+	pr(render_id)
+	const item_element = document.createElement("mize-" + render_id);
 
-	renders.push({
-		render_id: "first",
+	mize.renders[mize.id_to_render] = {
+		render_id: render_id,
 		ob: item_element,
-		item_id: id,
-	})
-	item_element.so = so
-	mize.so = so
+	}
+	pr("item_element: ", item_element)
+	pr("mize_element: ", mize_element)
 	mize_element.appendChild(item_element)
+	pr("item_element: ", item_element)
+	pr("mize_element: ", mize_element)
 
 	let num_u8 = new Uint8Array([1,15])
-	num_u8 = new Uint8Array([...num_u8, ...mize.encoder.encode(id), 47])
-	so.send(num_u8)
+	num_u8 = new Uint8Array([...num_u8, ...mize.encoder.encode(mize.id_to_render), 47])
+	mize.so.send(num_u8)
 }
 
 class Item{
@@ -258,7 +268,7 @@ async function handle_message(message){
 			}
 
 			//set item on render
-			let [render] = renders.filter( (render) => render.item_id == id_string)
+			let render = mize.renders[id_string]
 			let item = new Item(id_string, raw)
 			render.ob.getItemCallback(item)
 
@@ -310,7 +320,7 @@ async function handle_message(message){
 
 			let i = 0
 
-			const [render_update] = renders.filter( render => render.item_id == id_update)
+			const render_update = mize.renders[id_update]
 			let new_item = render_update.ob.item.clone()
 			while (i < num_of_updates) {
 

@@ -56,6 +56,7 @@ body {
 	-webkit-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
+	z-index: 5;
 }
 
 #overlay-button:active {
@@ -68,9 +69,18 @@ body {
 
 #overlay-menu {
 	position: absolute;
-	right: 0.5cm;
-	top: 2cm;
-	display: block;
+	right: 0;
+	top: 0;
+	height: 10cm;
+	width: 5cm;
+	background-color: #e6e6e6;
+	opacity: 0.85;
+	display: none;
+}
+#render-list {
+}
+
+.render-list-item {
 }
 	</style>
 	<div id="client-overlay">
@@ -78,7 +88,14 @@ body {
 			<h2 id="MZ">MZ</h2>
 		</button>
 		<div id="overlay-menu">
-			<h1>hi</h1>
+			<h3>MiZe Renders</h3>
+			<div id="render-lsit">
+				<button onclick='mize.change_render("first")' class="render-list-item">first</button><br>
+				<button onclick='mize.change_render("react-test")' class="render-list-item">react-test</button><br>
+				<button onclick='mize.change_render("uno-home")' class="render-list-item">UNO-Home</button><br>
+				<button onclick='mize.change_render("uno-game")' class="render-list-item">UNO-Game</button><br>
+				<button onclick='mize.change_render("uno-player")' class="render-list-item">UNO-Player</button><br>
+			</div>
 		</div>
 	</div>
 	<div id="mize"></div>
