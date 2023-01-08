@@ -52,7 +52,6 @@ async function main(so){
 	let id = location.pathname.slice(1)
 	if (location.pathname == "/") {id = "0"}
 	if (id == NaN) {pr("id is NaN"); id = "0"}
-	pr("id", id)
 	mize.id_to_render = id
 
 	render("first")
@@ -61,7 +60,6 @@ async function main(so){
 async function render(render_id){
 	//check if render is already in render_classes
 	const render = mize.render_classes[render_id]
-	pr("render: ", render)
 	let render_class = {}
 	if (render == undefined){
 		//get render
@@ -77,18 +75,13 @@ async function render(render_id){
 
 	const mize_element = document.getElementById("mize")
 	mize_element.innerHTML = ""
-	pr(render_id)
 	const item_element = document.createElement("mize-" + render_id);
 
 	mize.renders[mize.id_to_render] = {
 		render_id: render_id,
 		ob: item_element,
 	}
-	pr("item_element: ", item_element)
-	pr("mize_element: ", mize_element)
 	mize_element.appendChild(item_element)
-	pr("item_element: ", item_element)
-	pr("mize_element: ", mize_element)
 
 	let num_u8 = new Uint8Array([1,15])
 	num_u8 = new Uint8Array([...num_u8, ...mize.encoder.encode(mize.id_to_render), 47])
@@ -122,45 +115,79 @@ class Item{
 		this.update_raw(raw_item)
 	}
 
+	change_val(key, new_val){
+		const new_item = this.clone()
+		const [field] = new_item.fields.filter(field => mize.decoder.decode(field.raw[0]) == key)
+		field.raw[1] = new Uint8Array(new_val)
+		return new_item
+	}
+
 	update_raw(new_item){
 
-		const component_this = e.target.parentNode.parentNode.parentNode.host
-
-		const ar = Array.from(e.target.parentNode.childNodes)
-		const [input] = ar.filter( node => node.tagName == "INPUT")
-		const [key] = Array.from(e.target.parentNode.childNodes).filter( node => node.id == "key")
-		const [val_element] = Array.from(e.target.parentNode.childNodes).filter( node => node.id == "val")
-		const field = component_this.item.fields[val_element.parentNode.field_num].val_raw
+		let msg_tmp = []
+		let num_of_updates = 0
 
 
-		let answer = [1,8,
-			...mize.encoder.encode(this.id),
-			47, // a "/"
+		for (const new_field of new_item.fields) {
+			pr("AT KEY: ", mize.decoder.decode(new_field.raw[0]))
+			let [old_field] = this.fields.filter(old_field => unit8_equal(old_field.raw[0], new_field.raw[0]))
+				//pr("comparision", old_field.raw[0] == new_field.raw[0])
+				//pr("old field old", old_field.raw[0])
+				//pr("old field new", new_field.raw[0])
 
-			//num_of_updates
-			...u32_to_be_bytes(1),
+				//return old_field.raw[0] === new_field.raw[0]
+			//})
 
-		]
+			pr("old_field", old_field)
 
-			
-		pr(answer)
-		mize.so.send(new Uint8Array(answer))
-
-		for (let field of new_item) {
-			let found = this.raw.filter(new_field => {new_field.raw[0] == field.raw[0]})
-			let not_the_same = this.raw.filter(new_field => {new_field.raw[1] == field.raw[1]})
+			//old_field, if something changed in that field
+			//pr("old_field", old_field)
 
 			//in case there is a new key
-			if (found.length == 0){
+			if (!old_field){
 				pr("new-key")
-				answer = [
-					...answer,
-					//should repeat
-					...u32_to_be_bytes(field.raw[0].length),
-					...mize.encoder.encode(field.raw[0]),
+				pr(mize.decoder.decode(new_field.raw[0]))
+
+				num_of_updates += 1
+				msg_tmp = [
+					...msg_tmp,
+
+					...u32_to_be_bytes(new_field.raw[0].length),
+					...new_field.raw[0],
 
 					//update len
-					...u32_to_be_bytes(9 + field.raw[1].length + 9),
+					...u32_to_be_bytes(9 + new_field.raw[1].length),
+
+					//### update two: add everything
+					//update cmd
+					1,
+					//start
+					...u32_to_be_bytes(0),
+					//stop
+					...u32_to_be_bytes(new_field.raw[1].length),
+
+					...new_field.raw[1],
+				]
+			} else {
+				pr("old", old_field.raw[1])
+				pr("new", new_field.raw[1])
+
+				if (unit8_equal(new_field.raw[1], old_field.raw[1])){
+					pr("this field has not changed")
+					continue
+				}
+				pr("field changed")
+				//let [old_field] = this.fields.filter(old_field => {pr("old", old_field.raw[1]);pr("new", new_field.raw[1]);return old_field.raw[1] == new_field.raw[1]})
+				num_of_updates += 1
+
+				msg_tmp = [
+					...msg_tmp,
+
+					...u32_to_be_bytes(new_field.raw[0].length),
+					...new_field.raw[0],
+
+					//update len
+					...u32_to_be_bytes(9 + new_field.raw[1].length + 9),
 
 					//### update one: delete everything
 					//update cmd
@@ -168,7 +195,7 @@ class Item{
 					//start
 					...u32_to_be_bytes(0),
 					//stop
-					...u32_to_be_bytes(field.rawlength),
+					...u32_to_be_bytes(old_field.raw[1].length),
 
 					//### update two: add everything
 
@@ -177,13 +204,27 @@ class Item{
 					//start
 					...u32_to_be_bytes(0),
 					//stop
-					...u32_to_be_bytes(input.value.length),
+					...u32_to_be_bytes(new_field.raw[1].length),
 
-					...mize.encoder.encode(input.value),
+					...new_field.raw[1],
 				]
-			} else if (not_the_same.length == 0) {
 			}
 		}
+
+		let msg = [1,8,
+			...mize.encoder.encode(this.id),
+			47, // a "/"
+
+			//num_of_updates
+			...u32_to_be_bytes(num_of_updates),
+
+			//the rest of the msg
+			...msg_tmp
+		]
+
+		pr(msg)
+		mize.so.send(new Uint8Array(msg))
+
 	}
 }
 
@@ -526,3 +567,13 @@ function u32_to_be_bytes(num){
 	return new Uint8Array(bytes.reverse())
 }
 
+function unit8_equal(buf1, buf2){
+	    if (buf1.byteLength != buf2.byteLength) return false;
+	    var dv1 = new Int8Array(buf1);
+	    var dv2 = new Int8Array(buf2);
+	    for (var i = 0 ; i != buf1.byteLength ; i++)
+		    {
+				         if (dv1[i] != dv2[i]) return false;
+				     }
+	    return true;
+}
