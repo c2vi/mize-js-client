@@ -517,37 +517,69 @@ function generate_parsed_item(item) {
 
   // console.log(item.fields)
   // console.log(item.fields.filter((type) => type > 1))
-  let y = []
+  let unoplayer = []
 
   for (let field of item.fields) {
-    // pr(mize.decoder.decode(field.raw[0]), mize.decoder.decode(field.raw[1]))
-    // pr(mize.decoder.decode(field.raw[0]))
-
     // if there is no _type in the item, take it as all strings
     if (mize.decoder.decode(field.raw[0]) === '_type') {
-      //console.log(mize.decoder.decode(field.raw[1]), 'true')
       let x = mize.decoder.decode(field.raw[1])
-      //pr(mize.types[x])
-      y = mize.types[x]
+      pr(mize.decoder.decode(field.raw[0]))
+
+      unoplayer = mize.types[x]
+      pr('------')
+      pr(x)
+
       break
     } else {
-      //console.log(mize.decoder.decode(field.raw[0]), 'false')
     }
   }
+
+  pr('----------')
+  for (let field of item.fields) {
+    let x = mize.decoder.decode(field.raw[0])
+    // pr('x', x)
+    let a = unoplayer.filter((element) => {
+      // pr('ele', element[0])
+      return element[0] === x
+    })
+    let b = unoplayer.filter((element) => {
+      // pr('ele', element[1])
+      return element[1] === x
+    })
+    pr(a)
+    pr(b)
+
+    // pr(a[0])
+    // if (a[0] === '') {
+    //   console.log('adasda')
+    // }
+
+    // pr(field[0])
+    // if (field[1] === 'json_string_array') {
+    //   pr('im a json')
+    // } else if (field[1] === 'string') {
+    //   pr('im a string')
+    // } else if (field[1] === 'u_int') {
+    //   pr('im a u_int')
+    // } else {
+    //   return ''
+    // }
+  }
+
+  // mize.types.filter((ele) => (ele = { y }))
 
   // console.log(y)
 
-  for (let field of item.fields) {
-    // pr(mize.decoder.decode(field.raw[0]), mize.decoder.decode(field.raw[1]))
-    // pr(mize.decoder.decode(field.raw[0]))
+  // pr(mize.decoder.decode(field.raw[0]), mize.decoder.decode(field.raw[1]))
+  // pr(mize.decoder.decode(field.raw[0]))
 
-    // if there is no _type in the item, take it as all strings
-    if (mize.decoder.decode(field.raw[1]) === 'json_string_array') {
-      console.log(mize.decoder.decode(field.raw[1]), 'true')
-    } else {
-      console.log(mize.decoder.decode(field.raw[1]), 'false')
-    }
-  }
+  // if there is no _type in the item, take it as all strings
+  //   if (mize.decoder.decode(field.raw[1]) === 'json_string_array') {
+  //     console.log(mize.decoder.decode(field.raw[1]), 'true')
+  //   } else {
+  //     console.log(mize.decoder.decode(field.raw[1]), 'false')
+  //   }
+  // }
 
   //console.log(mize.decoder.decode(new Uint8Array([33, 33, 33, 33, 33])))
 
