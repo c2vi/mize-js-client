@@ -1,16 +1,43 @@
 
 //some global stuff
-pr = console.log
+pr = console.log //because I don't want to type console.log() a thousend times when I'm debugging
 mize = {}
 mize.encoder = new TextEncoder()
 mize.decoder = new TextDecoder()
-mize.defineRender = (render_class) => {
+mize.defineRender = (render_class, for_types) => {
 	mize.new_render = render_class
 }
 mize.render_classes = {}
 mize.renders = {}
+mize.default_renders = {}
+mize.items = {}
+mize.waiting_items = {}
 mize.change_render = async (render_id) => {
-	render(render_id)
+	//as long as we can only render one item at a time, this is fine
+	render(render_id, mize.id_to_render)
+}
+mize.get_item = (id, callback) => {
+	//item already gotten
+	if (mize.items[id]){
+		callback(mize.items[id])
+
+	//item is already in the process of being gotten
+	} else if (mize.waiting_items[id]){
+		mize.waiting_items[id].push(callback)
+
+	//start the process of getting the item
+	} else {
+		mize.waiting_items[id] = [callback]
+
+		//send msg to get the item
+		const num_u8 = new Uint8Array([1, 15, ...mize.encoder.encode(id), 47])
+		mize.so.send(num_u8)
+	}
+}
+
+mize.types = {}
+mize.define_type = (type, definition) => {
+	mize.types[type] = definition
 }
 
 document.addEventListener("DOMContentLoaded", () =>{
@@ -54,14 +81,22 @@ async function main(so){
 	if (id == NaN) {pr("id is NaN"); id = "0"}
 	mize.id_to_render = id
 
-	render("first")
+	mize.get_item(id, (item) => {
+		const [render_id] = item.fields.filter(field => mize.decoder.decode(field.raw[0]) == "_render")
+		if (render_id) {
+			render(render_id, item.id)
+		} else {
+			render("first", item.id)
+		}
+	})
+
 }
 
-async function render(render_id){
+async function render(render_id, item_id){
 	//check if render is already in render_classes
-	const render = mize.render_classes[render_id]
-	let render_class = {}
-	if (render == undefined){
+	let render_class = mize.render_classes[render_id]
+	if (render_class == undefined){
+
 		//get render
 		let res = await fetch("/==api==/render/" + render_id)
 		let script = await res.text()
@@ -83,9 +118,8 @@ async function render(render_id){
 	}
 	mize_element.appendChild(item_element)
 
-	let num_u8 = new Uint8Array([1,15])
-	num_u8 = new Uint8Array([...num_u8, ...mize.encoder.encode(mize.id_to_render), 47])
-	mize.so.send(num_u8)
+	//getItemCallback
+	item_element.getItemCallback(mize.items[item_id])
 }
 
 class Item{
@@ -129,24 +163,10 @@ class Item{
 
 
 		for (const new_field of new_item.fields) {
-			pr("AT KEY: ", mize.decoder.decode(new_field.raw[0]))
 			let [old_field] = this.fields.filter(old_field => unit8_equal(old_field.raw[0], new_field.raw[0]))
-				//pr("comparision", old_field.raw[0] == new_field.raw[0])
-				//pr("old field old", old_field.raw[0])
-				//pr("old field new", new_field.raw[0])
-
-				//return old_field.raw[0] === new_field.raw[0]
-			//})
-
-			pr("old_field", old_field)
-
-			//old_field, if something changed in that field
-			//pr("old_field", old_field)
 
 			//in case there is a new key
 			if (!old_field){
-				pr("new-key")
-				pr(mize.decoder.decode(new_field.raw[0]))
 
 				num_of_updates += 1
 				msg_tmp = [
@@ -169,15 +189,10 @@ class Item{
 					...new_field.raw[1],
 				]
 			} else {
-				pr("old", old_field.raw[1])
-				pr("new", new_field.raw[1])
 
 				if (unit8_equal(new_field.raw[1], old_field.raw[1])){
-					pr("this field has not changed")
 					continue
 				}
-				pr("field changed")
-				//let [old_field] = this.fields.filter(old_field => {pr("old", old_field.raw[1]);pr("new", new_field.raw[1]);return old_field.raw[1] == new_field.raw[1]})
 				num_of_updates += 1
 
 				msg_tmp = [
@@ -222,7 +237,6 @@ class Item{
 			...msg_tmp
 		]
 
-		pr(msg)
 		mize.so.send(new Uint8Array(msg))
 
 	}
@@ -309,11 +323,17 @@ async function handle_message(message){
 			}
 
 			//set item on render
-			let render = mize.renders[id_string]
 			let item = new Item(id_string, raw)
-			render.ob.item = item
-			render.ob.getItemCallback(item)
+			mize.waiting_items[id_string].forEach(callback => {
+				if (typeof callback == "function"){
+					callback(item)
+				} else {
+					callback.getItemCallback(item)
+				}
+			})
 
+			//add the item to the "cache"
+			mize.items[id_string] = item;
 			
 			break;
 
@@ -377,7 +397,6 @@ async function handle_message(message){
 
 				// in case this field does not yet exist
 				if (!field){
-					pr("new_field key", key_str)
 					field = new Field([key, new Uint8Array()])
 					new_item.fields.push(field)
 				}
