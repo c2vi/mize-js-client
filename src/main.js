@@ -512,18 +512,15 @@ async function handle_message(message) {
   //let arr = new Uint8Array(number_array)
 }
 
+//todo lucas
 function unparse(parsed_item) {
-  //TODO (Lucas)
   //the opposite from generate_parsed_item
   //should return an object of Class Item
 }
 
+//todo lucas
 function generate_parsed_item(item) {
-  //TODO (Lucas)
-
-  //hard coded types
-  //every type should eventually be an item on the server.
-  //untill then: all types have to be here
+  let object = []
 
   mize.types = {
     '!UNO!Game': [
@@ -536,10 +533,81 @@ function generate_parsed_item(item) {
     ],
     '!UNO!Main': [],
   }
+  //hard coded types
+  //every type should eventually be an item on the server.
+  //until then: all types have to be here
+
+  // console.log(item.fields)
+  // console.log(item.fields.filter((type) => type > 1))
+  let unoplayer = []
+
+  for (let field of item.fields) {
+    // if there is no _type in the item, take it as all strings
+    if (mize.decoder.decode(field.raw[0]) === '_type') {
+      let x = mize.decoder.decode(field.raw[1])
+      pr(mize.decoder.decode(field.raw[0]))
+
+      unoplayer = mize.types[x]
+      pr('------')
+      pr(x)
+
+      break
+    } else {
+    }
+  }
+
+  pr('----------')
+  for (let field of item.fields) {
+    let x = mize.decoder.decode(field.raw[0])
+    // pr('x', x)
+    let a = unoplayer.filter((element) => {
+      // pr('ele', element[0])
+      return element[0] === x
+    })
+    let b = unoplayer.filter((element) => {
+      // pr('ele', element[1])
+      return element[1] === x
+    })
+    pr(a)
+    pr(b)
+
+    // pr(a[0])
+    // if (a[0] === '') {
+    //   console.log('adasda')
+    // }
+
+    // pr(field[0])
+    // if (field[1] === 'json_string_array') {
+    //   pr('im a json')
+    // } else if (field[1] === 'string') {
+    //   pr('im a string')
+    // } else if (field[1] === 'u_int') {
+    //   pr('im a u_int')
+    // } else {
+    //   return ''
+    // }
+  }
+
+  // mize.types.filter((ele) => (ele = { y }))
+
+  // console.log(y)
+
+  // pr(mize.decoder.decode(field.raw[0]), mize.decoder.decode(field.raw[1]))
+  // pr(mize.decoder.decode(field.raw[0]))
+
+  // if there is no _type in the item, take it as all strings
+  //   if (mize.decoder.decode(field.raw[1]) === 'json_string_array') {
+  //     console.log(mize.decoder.decode(field.raw[1]), 'true')
+  //   } else {
+  //     console.log(mize.decoder.decode(field.raw[1]), 'false')
+  //   }
+  // }
+
+  //console.log(mize.decoder.decode(new Uint8Array([33, 33, 33, 33, 33])))
+
+  //let x = item.fields.filter((type) => type.length > 1)
 
   //get the type from the types object
-
-  //if there is no _type in the item, take it as all strings
 
   //return an object like the hardcoded one (without any getter or setter magic)
 
