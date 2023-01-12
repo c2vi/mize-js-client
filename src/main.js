@@ -90,7 +90,7 @@ async function main(so) {
     if (render_id) {
       render(render_id, item.id)
     } else {
-      render('first', item.id)
+      render('uno-player', item.id)
     }
   })
 }
@@ -512,116 +512,123 @@ async function handle_message(message) {
   //let arr = new Uint8Array(number_array)
 }
 
-//todo lucas
-function unparse(parsed_item) {
-  //the opposite from generate_parsed_item
-  //should return an object of Class Item
+// hardcoded for testing
+mize.types = {
+  '!UNO!Game': [
+    ['players', 'json_string_array'],
+    ['card_in_middle', 'string'],
+  ],
+  '!UNO!Player': [
+    ['cards_of_player', 'json_string_array'],
+    ['cards_to_take', 'u_int'],
+  ],
+  '!UNO!Main': [['games', 'json_string_array']],
+  'mize-main': [
+    ['num_of_items', 'u_int'],
+    ['next_free_id', 'u_int'],
+  ],
 }
 
-//todo lucas
 function generate_parsed_item(item) {
-  let object = []
+  let object = {}
+  let item_keyval = []
 
-  mize.types = {
-    '!UNO!Game': [
-      ['players', 'json_string_array'],
-      ['card_in_middle', 'string'],
-    ],
-    '!UNO!Player': [
-      ['cards_of_player', 'json_string_array'],
-      ['cards_to_take', 'u_int'],
-    ],
-    '!UNO!Main': [],
-  }
-  //hard coded types
-  //every type should eventually be an item on the server.
-  //until then: all types have to be here
-
-  // console.log(item.fields)
-  // console.log(item.fields.filter((type) => type > 1))
-  let unoplayer = []
+  // pr('item.fields[0].raw[0] - raw', item.fields[0].raw[0])
+  // pr('item.fields[0].raw[0] - dec', mize.decoder.decode(item.fields[0].raw[0]))
+  // pr(
+  //   'item.fields[0].raw[0] - enc',
+  //   mize.encoder.encode(mize.decoder.decode(item.fields[0].raw[0]))
+  // )
 
   for (let field of item.fields) {
-    // if there is no _type in the item, take it as all strings
     if (mize.decoder.decode(field.raw[0]) === '_type') {
-      let x = mize.decoder.decode(field.raw[1])
-      pr(mize.decoder.decode(field.raw[0]))
-
-      unoplayer = mize.types[x]
-      pr('------')
-      pr(x)
+      let key = mize.decoder.decode(field.raw[0])
+      let val = mize.decoder.decode(field.raw[1])
+      item_keyval.push(key, val)
 
       break
     } else {
     }
   }
 
-  pr('----------')
   for (let field of item.fields) {
-    let x = mize.decoder.decode(field.raw[0])
-    // pr('x', x)
-    let a = unoplayer.filter((element) => {
-      // pr('ele', element[0])
-      return element[0] === x
-    })
-    let b = unoplayer.filter((element) => {
-      // pr('ele', element[1])
-      return element[1] === x
-    })
-    pr(a)
-    pr(b)
+    let key = mize.decoder.decode(field.raw[0])
+    let val = mize.decoder.decode(field.raw[1])
+    let mizetype_keyval = mize.types[item_keyval[1]]
 
-    // pr(a[0])
-    // if (a[0] === '') {
-    //   console.log('adasda')
-    // }
+    if (mizetype_keyval === undefined) {
+      if (key === '_commit') {
+        let parse = from_be_bytes(field.raw[1])
+        object[key] = parse
+      } else {
+        let parse = val
+        object[key] = parse
+      }
+      continue
+    }
 
-    // pr(field[0])
-    // if (field[1] === 'json_string_array') {
-    //   pr('im a json')
-    // } else if (field[1] === 'string') {
-    //   pr('im a string')
-    // } else if (field[1] === 'u_int') {
-    //   pr('im a u_int')
-    // } else {
-    //   return ''
-    // }
+    let [compare_keys] = mizetype_keyval.filter((ele) => ele[0] === key)
+
+    if (key === '_commit') {
+      let parse = from_be_bytes(field.raw[1])
+      object[key] = parse
+    } else if (compare_keys === undefined) {
+      let parse = val //if undefined return as a string
+      object[key] = parse
+    } else if (compare_keys[1] === 'json_string_array') {
+      let parse = JSON.parse(val)
+      object[key] = parse
+    } else if (compare_keys[1] === 'string') {
+      let parse = val
+      object[key] = parse
+    } else if (compare_keys[1] === 'u_int') {
+      let parse = from_be_bytes(field.raw[1])
+      object[key] = parse
+    } else {
+    }
   }
 
-  // mize.types.filter((ele) => (ele = { y }))
+  pr('object', object)
+  return object
+}
 
-  // console.log(y)
+// hardcoded for testing
+let test = {}
+test['num_of_items'] = 5
+test['next_free_id'] = 5
+test['_commit'] = 4
+test['_type'] = 'mize-main'
 
-  // pr(mize.decoder.decode(field.raw[0]), mize.decoder.decode(field.raw[1]))
-  // pr(mize.decoder.decode(field.raw[0]))
+//should return item
+function unparse(parsed_item) {
+  let object = {}
 
-  // if there is no _type in the item, take it as all strings
-  //   if (mize.decoder.decode(field.raw[1]) === 'json_string_array') {
-  //     console.log(mize.decoder.decode(field.raw[1]), 'true')
-  //   } else {
-  //     console.log(mize.decoder.decode(field.raw[1]), 'false')
-  //   }
-  // }
+  let mize_type = mize.types[parsed_item._type]
 
-  //console.log(mize.decoder.decode(new Uint8Array([33, 33, 33, 33, 33])))
+  test = Object.entries(parsed_item)
 
-  //let x = item.fields.filter((type) => type.length > 1)
+  let same_fields = mize_type.filter((ele) => ele[0])
+  pr('same_fields: ', same_fields)
 
-  //get the type from the types object
-
-  //return an object like the hardcoded one (without any getter or setter magic)
-
-  //hardcoded for testing
-  return {
-    _id: '!UNO!player_0', //always string
-    _type: '!UNO!Player', //always string
-    cards_of_player: ['red_3', 'blue_2'], //json_string_array
-    cards_to_take: 0, //u_int
+  for (let fields of same_fields) {
+    pr('fieldsasdasda', fields[1])
+    if (fields[1] === undefined) {
+      pr('hi, undefined')
+    } else if (fields[1] === 'json_string_array') {
+      pr('hi, json_string_array')
+    } else if (fields[1] === 'string') {
+      pr('hi, string')
+    } else if (fields[1] === 'u_int') {
+      pr('hi, u_int')
+    } else {
+    }
   }
 }
 
+unparse(test)
+
 function from_be_bytes(bytes) {
-  clone = Array.from(bytes)
+  let clone = Array.from(bytes)
   clone.reverse()
 
   let count = 0
@@ -686,7 +693,9 @@ function unit8_equal(buf1, buf2) {
   var dv1 = new Int8Array(buf1)
   var dv2 = new Int8Array(buf2)
   for (var i = 0; i != buf1.byteLength; i++) {
-    if (dv1[i] != dv2[i]) return false
+    if (dv1[i] != dv2[i]) {
+      return false
+    }
   }
   return true
 }
