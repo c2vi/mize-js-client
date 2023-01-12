@@ -541,9 +541,9 @@ function generate_parsed_item(item) {
   // )
 
   for (let field of item.fields) {
-    if (mize.decoder.decode(field.raw[0]) === '_type') {
-      let key = mize.decoder.decode(field.raw[0])
-      let val = mize.decoder.decode(field.raw[1])
+    let key = mize.decoder.decode(field.raw[0])
+    let val = mize.decoder.decode(field.raw[1])
+    if (key === '_type') {
       item_keyval.push(key, val)
 
       break
@@ -556,10 +556,13 @@ function generate_parsed_item(item) {
     let val = mize.decoder.decode(field.raw[1])
     let mizetype_keyval = mize.types[item_keyval[1]]
 
+    // handle undefined errors
     if (mizetype_keyval === undefined) {
+      // handle '_commit' - so it doesn't get eaten by undefined
       if (key === '_commit') {
         let parse = from_be_bytes(field.raw[1])
         object[key] = parse
+        // else just return string
       } else {
         let parse = val
         object[key] = parse
@@ -567,35 +570,39 @@ function generate_parsed_item(item) {
       continue
     }
 
-    let [compare_keys] = mizetype_keyval.filter((ele) => ele[0] === key)
+    let [compare] = mizetype_keyval.filter((ele) => ele[0] === key)
 
     if (key === '_commit') {
       let parse = from_be_bytes(field.raw[1])
       object[key] = parse
-    } else if (compare_keys === undefined) {
-      let parse = val //if undefined return as a string
-      object[key] = parse
-    } else if (compare_keys[1] === 'json_string_array') {
-      let parse = JSON.parse(val)
-      object[key] = parse
-    } else if (compare_keys[1] === 'string') {
+      // if undefined return as a string
+    } else if (compare === undefined) {
       let parse = val
       object[key] = parse
-    } else if (compare_keys[1] === 'u_int') {
+      // if value is 'json_string_array'
+    } else if (compare[1] === 'json_string_array') {
+      let parse = JSON.parse(val)
+      object[key] = parse
+      // if value is 'string'
+    } else if (compare[1] === 'string') {
+      let parse = val
+      object[key] = parse
+      // if value is 'u_int'
+    } else if (compare[1] === 'u_int') {
       let parse = from_be_bytes(field.raw[1])
       object[key] = parse
     } else {
     }
   }
 
-  pr('object', object)
-  return object
+  // pr('object', object)
+  // return object
 }
 
 // hardcoded for testing
 let test = {}
 test['num_of_items'] = 5
-test['next_free_id'] = 5
+test['next_free_id'] = 10
 test['_commit'] = 4
 test['_type'] = 'mize-main'
 
@@ -603,26 +610,42 @@ test['_type'] = 'mize-main'
 function unparse(parsed_item) {
   let object = {}
 
+  // todo - handle cases if there is no _type
   let mize_type = mize.types[parsed_item._type]
+  // pr('mize_type', mize_type)
 
-  test = Object.entries(parsed_item)
+  parsed_array = Object.entries(parsed_item) // item to array
 
-  let same_fields = mize_type.filter((ele) => ele[0])
-  pr('same_fields: ', same_fields)
+  for (let fields of parsed_array) {
+    let p_key = fields[0]
+    let p_val = fields[1]
 
-  for (let fields of same_fields) {
-    pr('fieldsasdasda', fields[1])
-    if (fields[1] === undefined) {
-      pr('hi, undefined')
-    } else if (fields[1] === 'json_string_array') {
-      pr('hi, json_string_array')
-    } else if (fields[1] === 'string') {
-      pr('hi, string')
-    } else if (fields[1] === 'u_int') {
-      pr('hi, u_int')
+    if (mize_type === undefined) {
+      object[p_key] = u64_to_be_bytes(p_val)
+      if (p_key === '_commit') {
+      } else {
+        object[p_key] = p_val
+      }
+      continue
+    }
+
+    let [compare] = mize_type.filter((ele) => ele[0] == p_key)
+
+    if (p_key === '_commit') {
+      object[p_key] = u64_to_be_bytes(p_val)
+    } else if (compare[1] === undefined) {
+      object[p_key] = u64_to_be_bytes(p_val)
+    } else if (compare[1] === 'json_string_array') {
+      object[p_key] = JSON.parse(p_val)
+    } else if (compare[1] === 'string') {
+      object[p_key] = p_val
+    } else if (compare[1] === 'u_int') {
+      object[p_key] = u64_to_be_bytes(p_val)
     } else {
     }
   }
+  pr('object', object)
+  return object
 }
 
 unparse(test)
