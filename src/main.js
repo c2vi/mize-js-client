@@ -638,7 +638,7 @@ function unparse(parsed_item) {
       let arr_val = [mize.encoder.encode(p_val)]
       item.push(arr_key, arr_val)
     }
-    // Fehler war das "if(compare[1] === undefined) {"
+    // error because: "if(compare[1] === undefined) {"
     if (compare === undefined) {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(p_val)]
