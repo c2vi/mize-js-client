@@ -608,11 +608,11 @@ test['_type'] = 'mize-main'
 
 //should return item
 function unparse(parsed_item) {
-  let object = {}
+  let item = []
 
   // todo - handle cases if there is no _type
   let mize_type = mize.types[parsed_item._type]
-  // pr('mize_type', mize_type)
+  // pr('mize_type', mize_type
 
   parsed_array = Object.entries(parsed_item) // item to array
 
@@ -621,10 +621,12 @@ function unparse(parsed_item) {
     let p_val = fields[1]
 
     if (mize_type === undefined) {
-      object[p_key] = u64_to_be_bytes(p_val)
+      object[p_key] = mize.encoder.encode(p_val)
       if (p_key === '_commit') {
       } else {
-        object[p_key] = p_val
+        let arr_key = [mize.encoder.encode(p_key)]
+        let arr_val = [mize.encoder.encode(p_val)]
+        item.push(arr_key, arr_val)
       }
       continue
     }
@@ -632,20 +634,34 @@ function unparse(parsed_item) {
     let [compare] = mize_type.filter((ele) => ele[0] == p_key)
 
     if (p_key === '_commit') {
-      object[p_key] = u64_to_be_bytes(p_val)
-    } else if (compare[1] === undefined) {
-      object[p_key] = u64_to_be_bytes(p_val)
+      let arr_key = [mize.encoder.encode(p_key)] // keys are always strings
+      let arr_val = [mize.encoder.encode(p_val)]
+      item.push(arr_key, arr_val)
+    }
+    // Fehler war das "if(compare[1] === undefined) {"
+    if (compare === undefined) {
+      let arr_key = [mize.encoder.encode(p_key)]
+      let arr_val = [mize.encoder.encode(p_val)]
+      item.push(arr_key, arr_val)
     } else if (compare[1] === 'json_string_array') {
-      object[p_key] = JSON.parse(p_val)
+      let arr_key = [mize.encoder.encode(p_key)]
+      let arr_val = [mize.encoder.encode(JSON.stringify(p_val))] // make a string and encode
+      item.push(arr_key, arr_val)
     } else if (compare[1] === 'string') {
-      object[p_key] = p_val
+      let arr_key = [mize.encoder.encode(p_key)]
+      let arr_val = [mize.encoder.encode(p_val)]
+      item.push(arr_key, arr_val)
     } else if (compare[1] === 'u_int') {
-      object[p_key] = u64_to_be_bytes(p_val)
+      let arr_key = [mize.encoder.encode(p_key)]
+      let arr_val = [u64_to_be_bytes(p_val)] // uint8
+      item.push(arr_key, arr_val)
     } else {
     }
+    // pr('item', item)
   }
-  pr('object', object)
-  return object
+  let newitem = new Item('1', item)
+  // pr('newitem', newitem)
+  return newitem
 }
 
 unparse(test)
