@@ -600,11 +600,6 @@ function generate_parsed_item(item) {
 }
 
 // hardcoded for testing
-let test = {}
-test['num_of_items'] = 5
-test['next_free_id'] = 10
-test['_commit'] = 4
-test['_type'] = 'mize-main'
 
 //should return item
 function unparse(parsed_item) {
@@ -626,7 +621,7 @@ function unparse(parsed_item) {
       } else {
         let arr_key = [mize.encoder.encode(p_key)]
         let arr_val = [mize.encoder.encode(p_val)]
-        item.push(arr_key, arr_val)
+        item.push([arr_key], [arr_val])
       }
       continue
     }
@@ -636,25 +631,25 @@ function unparse(parsed_item) {
     if (p_key === '_commit') {
       let arr_key = [mize.encoder.encode(p_key)] // keys are always strings
       let arr_val = [mize.encoder.encode(p_val)]
-      item.push(arr_key, arr_val)
+      item.push([arr_key], [arr_val])
     }
     // error because: "if(compare[1] === undefined) {"
     if (compare === undefined) {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(p_val)]
-      item.push(arr_key, arr_val)
+      item.push([arr_key], [arr_val])
     } else if (compare[1] === 'json_string_array') {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(JSON.stringify(p_val))] // make a string and encode
-      item.push(arr_key, arr_val)
+      item.push([arr_key], [arr_val])
     } else if (compare[1] === 'string') {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(p_val)]
-      item.push(arr_key, arr_val)
+      item.push([arr_key], [arr_val])
     } else if (compare[1] === 'u_int') {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [u64_to_be_bytes(p_val)] // uint8
-      item.push(arr_key, arr_val)
+      item.push([arr_key], [arr_val])
     } else {
     }
     // pr('item', item)
@@ -663,8 +658,6 @@ function unparse(parsed_item) {
   // pr('newitem', newitem)
   return newitem
 }
-
-unparse(test)
 
 function from_be_bytes(bytes) {
   let clone = Array.from(bytes)
