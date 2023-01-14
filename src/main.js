@@ -595,19 +595,13 @@ function generate_parsed_item(item) {
     }
   }
 
-  // pr('object', object)
-  // return object
 }
-
-// hardcoded for testing
 
 //should return item
 function unparse(parsed_item) {
   let item = []
 
-  // todo - handle cases if there is no _type
   let mize_type = mize.types[parsed_item._type]
-  // pr('mize_type', mize_type
 
   parsed_array = Object.entries(parsed_item) // item to array
 
@@ -621,7 +615,7 @@ function unparse(parsed_item) {
       } else {
         let arr_key = [mize.encoder.encode(p_key)]
         let arr_val = [mize.encoder.encode(p_val)]
-        item.push([arr_key], [arr_val])
+        item.push([arr_key, arr_val])
       }
       continue
     }
@@ -631,31 +625,30 @@ function unparse(parsed_item) {
     if (p_key === '_commit') {
       let arr_key = [mize.encoder.encode(p_key)] // keys are always strings
       let arr_val = [mize.encoder.encode(p_val)]
-      item.push([arr_key], [arr_val])
+      item.push([arr_key, arr_val])
     }
     // error because: "if(compare[1] === undefined) {"
     if (compare === undefined) {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(p_val)]
-      item.push([arr_key], [arr_val])
+      item.push([arr_key, arr_val])
     } else if (compare[1] === 'json_string_array') {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(JSON.stringify(p_val))] // make a string and encode
-      item.push([arr_key], [arr_val])
+      item.push([arr_key, arr_val])
     } else if (compare[1] === 'string') {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [mize.encoder.encode(p_val)]
-      item.push([arr_key], [arr_val])
+      item.push([arr_key, arr_val])
     } else if (compare[1] === 'u_int') {
       let arr_key = [mize.encoder.encode(p_key)]
       let arr_val = [u64_to_be_bytes(p_val)] // uint8
-      item.push([arr_key], [arr_val])
+      item.push([arr_key, arr_val])
     } else {
     }
-    // pr('item', item)
   }
-  let newitem = new Item('1', item)
-  // pr('newitem', newitem)
+	//mize.id_to_render is not going to work, when we support multiple renders per client
+  let newitem = new Item(mize.id_to_render, item)
   return newitem
 }
 
