@@ -11,6 +11,7 @@ mize.renders = {}
 mize.default_renders = {}
 mize.items = {}
 mize.waiting_items = {}
+mize.update_callbacks = {}
 mize.change_render = async (render_id) => {
   //as long as we can only render one item at a time, this is fine
   render(render_id, mize.id_to_render)
@@ -52,6 +53,16 @@ document.addEventListener('DOMContentLoaded', () => {
   /////////////// client overlay ////////////////
   const client_overlay = document.getElementById('client-overlay')
   client_overlay.childNodes[1].onclick = mz_click
+	const overlay_menu = document.getElementById("overlay-menu")
+
+	for (const el of overlay_menu.childNodes[3].childNodes){
+		if (el.tagName == "BUTTON"){
+			el.onclick = () =>{
+				mize.change_render(el.id)
+      		client_overlay.childNodes[3].style.display = 'none'
+			}
+		}
+	}
 
   client_overlay.addEventListener('mouseenter', (e) => {
     e.target.childNodes[1].style.display = 'flex'
@@ -90,7 +101,7 @@ async function main(so) {
     if (render_id) {
       render(render_id, item.id)
     } else {
-      render('uno-player', item.id)
+      render("react-test", item.id)
     }
   })
 }
@@ -114,14 +125,22 @@ async function render(render_id, item_id) {
   mize_element.innerHTML = ''
   const item_element = document.createElement('mize-' + render_id)
 
+	if (!mize.update_callbacks[item_id]){mize.update_callbacks[item_id] = []}
+	mize.update_callbacks[item_id].push(item_element)
+
   mize.renders[mize.id_to_render] = {
     render_id: render_id,
     ob: item_element,
   }
   mize_element.appendChild(item_element)
 
+	item_element.render_id = render_id
+	item_element.id = item_id
+	item_element.item = mize.items[item_id]
+
   //getItemCallback
   item_element.getItemCallback(mize.items[item_id])
+
 }
 
 class Item {
@@ -129,6 +148,11 @@ class Item {
     //raw: [["key1", "val1"]["key2", "val2"]]
     this.fields = []
     for (let field_raw of raw) {
+
+		 //don't add empty fields
+		 if (field_raw[0].length == 0){
+			 continue
+		 }
       this.fields.push(new Field(field_raw))
     }
     this.id = id
@@ -368,7 +392,7 @@ async function handle_message(message) {
       pr('got update message')
 
       //get the id
-      id_update = ''
+      let id_update = ''
       let ch_update = 0
       let index_update = 2
       while (ch_update != 47 && index_update < 2000) {
@@ -393,7 +417,7 @@ async function handle_message(message) {
       let i = 0
 
       const render_update = mize.renders[id_update]
-      let new_item = render_update.ob.item.clone()
+      let new_item = mize.items[id_update].clone()
       while (i < num_of_updates) {
         //get key_len
         let key_len = from_be_bytes(
@@ -485,17 +509,32 @@ async function handle_message(message) {
         }
         i += 1
       }
-      if (render_update.ob.updateCallback) {
-        render_update.ob.updateCallback({
+
+		//remove empty fields
+		new_item.fields = new_item.fields.filter(field => field.raw[1].length != 0)
+
+		const update = {
           update_src: 'got_update_msg',
           now: new_item,
-          before: render_update.ob.item,
-        })
-        render_update.ob.item = new_item
-      } else {
-        render_update.ob.getItemCallback(new_item)
-        render_update.ob.item = new_item
-      }
+          before: mize.items[id_update],
+		}
+
+      //update the item in the "cache"
+      mize.items[id_update] = new_item
+
+      //set item on render
+      mize.update_callbacks[id_update].forEach((callback) => {
+        if (typeof callback == 'function') {
+          callback(update)
+        } else if (callback.updateCallback) {
+				callback.item = new_item
+				callback.updateCallback(update)
+
+		  } else {
+				render(callback.render_id, id_update)
+        }
+      })
+
       break
 
     case 11:
@@ -532,13 +571,6 @@ mize.types = {
 function generate_parsed_item(item) {
   let object = {}
   let item_keyval = []
-
-  // pr('item.fields[0].raw[0] - raw', item.fields[0].raw[0])
-  // pr('item.fields[0].raw[0] - dec', mize.decoder.decode(item.fields[0].raw[0]))
-  // pr(
-  //   'item.fields[0].raw[0] - enc',
-  //   mize.encoder.encode(mize.decoder.decode(item.fields[0].raw[0]))
-  // )
 
   for (let field of item.fields) {
     let key = mize.decoder.decode(field.raw[0])
@@ -594,7 +626,7 @@ function generate_parsed_item(item) {
     } else {
     }
   }
-
+	return object
 }
 
 //should return item
