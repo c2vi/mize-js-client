@@ -128,7 +128,8 @@ async function render(render_id, item_id) {
   mize_element.innerHTML = ''
   const item_element = document.createElement('mize-' + render_id)
 
-	if (!mize.update_callbacks[item_id]){mize.update_callbacks[item_id] = []}
+	//if (!mize.update_callbacks[item_id]){mize.update_callbacks[item_id] = []}
+	mize.update_callbacks[item_id] = []
 	mize.update_callbacks[item_id].push(item_element)
 
   mize.renders[mize.id_to_render] = {
