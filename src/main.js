@@ -1,6 +1,7 @@
 //some global stuff
 pr = console.log //because I don't want to type console.log() a thousend times when I'm debugging
 mize = {}
+//mize.Items = []
 mize.encoder = new TextEncoder()
 mize.decoder = new TextDecoder()
 mize.defineRender = (render_class, for_types) => {
@@ -15,6 +16,7 @@ mize.update_callbacks = {}
 mize.change_render = async (render_id) => {
   //as long as we can only render one item at a time, this is fine
   render(render_id, mize.id_to_render)
+	mize.update_callbacks[mize.id_to_render] = []
 }
 mize.get_item = (id, callback) => {
   //item already gotten
@@ -101,12 +103,13 @@ async function main(so) {
     if (render_id) {
       render(render_id, item.id)
     } else {
-      render("react-test", item.id)
+      render("first", item.id)
     }
   })
 }
 
 async function render(render_id, item_id) {
+	pr("render", item_id, render_id)
   //check if render is already in render_classes
   let render_class = mize.render_classes[render_id]
   if (render_class == undefined) {
@@ -145,6 +148,7 @@ async function render(render_id, item_id) {
 
 class Item {
   constructor(id, raw) {
+	  //mize.Items.push(this)
     //raw: [["key1", "val1"]["key2", "val2"]]
     this.fields = []
     for (let field_raw of raw) {
@@ -187,6 +191,8 @@ class Item {
   update_raw(new_item) {
     let msg_tmp = []
     let num_of_updates = 0
+	  pr("new_item", new_item.get_parsed())
+	  pr("old", this.get_parsed())
 
     for (const new_field of new_item.fields) {
       let [old_field] = this.fields.filter((old_field) =>
@@ -265,6 +271,12 @@ class Item {
       ...msg_tmp,
     ]
 
+	  if (num_of_updates == 0) {
+		  pr("empty update msg")
+		  return
+	  }
+
+	  pr("actually sending update msg", msg)
     mize.so.send(new Uint8Array(msg))
   }
 }
@@ -531,6 +543,7 @@ async function handle_message(message) {
 				callback.updateCallback(update)
 
 		  } else {
+			  pr("has no updateCallback")
 				render(callback.render_id, id_update)
         }
       })
@@ -629,7 +642,7 @@ function generate_parsed_item(item) {
 	return object
 }
 
-//should return item
+//should return something of Class Item
 function unparse(parsed_item) {
   let item = []
 
@@ -642,12 +655,19 @@ function unparse(parsed_item) {
     let p_val = fields[1]
 
     if (mize_type === undefined) {
-      object[p_key] = mize.encoder.encode(p_val)
       if (p_key === '_commit') {
-      } else {
-        let arr_key = [mize.encoder.encode(p_key)]
-        let arr_val = [mize.encoder.encode(p_val)]
+			//handle as u_int
+
+        let arr_key = mize.encoder.encode(p_key)
+        let arr_val = u64_to_be_bytes(p_val)
+		 	pr("undefined", p_val)
         item.push([arr_key, arr_val])
+
+      } else {
+        let arr_key = mize.encoder.encode(p_key)
+        let arr_val = mize.encoder.encode(p_val)
+        item.push([arr_key, arr_val])
+
       }
       continue
     }
@@ -655,32 +675,35 @@ function unparse(parsed_item) {
     let [compare] = mize_type.filter((ele) => ele[0] == p_key)
 
     if (p_key === '_commit') {
-      let arr_key = [mize.encoder.encode(p_key)] // keys are always strings
-      let arr_val = [mize.encoder.encode(p_val)]
+      let arr_key = mize.encoder.encode(p_key) // keys are always strings
+      let arr_val = u64_to_be_bytes(p_val)
       item.push([arr_key, arr_val])
+		 continue
     }
     // error because: "if(compare[1] === undefined) {"
     if (compare === undefined) {
-      let arr_key = [mize.encoder.encode(p_key)]
-      let arr_val = [mize.encoder.encode(p_val)]
+      let arr_key = mize.encoder.encode(p_key)
+      let arr_val = mize.encoder.encode(p_val)
       item.push([arr_key, arr_val])
     } else if (compare[1] === 'json_string_array') {
-      let arr_key = [mize.encoder.encode(p_key)]
-      let arr_val = [mize.encoder.encode(JSON.stringify(p_val))] // make a string and encode
+      let arr_key = mize.encoder.encode(p_key)
+      let arr_val = mize.encoder.encode(JSON.stringify(p_val)) // make a string and encode
       item.push([arr_key, arr_val])
     } else if (compare[1] === 'string') {
-      let arr_key = [mize.encoder.encode(p_key)]
-      let arr_val = [mize.encoder.encode(p_val)]
+      let arr_key = mize.encoder.encode(p_key)
+      let arr_val = mize.encoder.encode(p_val)
       item.push([arr_key, arr_val])
     } else if (compare[1] === 'u_int') {
-      let arr_key = [mize.encoder.encode(p_key)]
-      let arr_val = [u64_to_be_bytes(p_val)] // uint8
+      let arr_key = mize.encoder.encode(p_key)
+      let arr_val = u64_to_be_bytes(p_val) // uint8
       item.push([arr_key, arr_val])
     } else {
     }
   }
 	//mize.id_to_render is not going to work, when we support multiple renders per client
   let newitem = new Item(mize.id_to_render, item)
+
+	pr("newitem commit", newitem.get_parsed()["_commit"])
   return newitem
 }
 
