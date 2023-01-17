@@ -114,9 +114,11 @@ async function render(render_id, item_id) {
   let render_class = mize.render_classes[render_id]
   if (render_class == undefined) {
     //get render
-    let res = await fetch('/==api==/render/' + render_id)
-    let script = await res.text()
-    eval(script)
+    //let res = await fetch('/==api==/render/' + render_id)
+    //let script = await res.text()
+    //eval(script)
+	  
+    let res = await import('/==api==/render/' + render_id)
 
     render_class = mize.new_render
     mize.render_classes[render_id] = { ob: render_class }
