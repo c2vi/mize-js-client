@@ -16,7 +16,7 @@ mize.update_callbacks = {}
 mize.change_render = async (render_id) => {
   //as long as we can only render one item at a time, this is fine
   render(render_id, mize.id_to_render)
-	mize.update_callbacks[mize.id_to_render] = []
+  mize.update_callbacks[mize.id_to_render] = []
 }
 mize.get_item = (id, callback) => {
   //item already gotten
@@ -55,16 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
   /////////////// client overlay ////////////////
   const client_overlay = document.getElementById('client-overlay')
   client_overlay.childNodes[1].onclick = mz_click
-	const overlay_menu = document.getElementById("overlay-menu")
+  const overlay_menu = document.getElementById('overlay-menu')
 
-	for (const el of overlay_menu.childNodes[3].childNodes){
-		if (el.tagName == "BUTTON"){
-			el.onclick = () =>{
-				mize.change_render(el.id)
-      		client_overlay.childNodes[3].style.display = 'none'
-			}
-		}
-	}
+  for (const el of overlay_menu.childNodes[3].childNodes) {
+    if (el.tagName == 'BUTTON') {
+      el.onclick = () => {
+        mize.change_render(el.id)
+        client_overlay.childNodes[3].style.display = 'none'
+      }
+    }
+  }
 
   client_overlay.addEventListener('mouseenter', (e) => {
     e.target.childNodes[1].style.display = 'flex'
@@ -103,13 +103,13 @@ async function main(so) {
     if (render_id) {
       render(render_id, item.id)
     } else {
-      render("first", item.id)
+      render('first', item.id)
     }
   })
 }
 
 async function render(render_id, item_id) {
-	pr("render", item_id, render_id)
+  pr('render', item_id, render_id)
   //check if render is already in render_classes
   let render_class = mize.render_classes[render_id]
   if (render_class == undefined) {
@@ -117,8 +117,8 @@ async function render(render_id, item_id) {
     //let res = await fetch('/==api==/render/' + render_id)
     //let script = await res.text()
     //eval(script)
-	  
-    let res = await import('/==api==/render/' + render_id)
+
+    await import('/==api==/render/' + render_id)
 
     render_class = mize.new_render
     mize.render_classes[render_id] = { ob: render_class }
@@ -130,9 +130,9 @@ async function render(render_id, item_id) {
   mize_element.innerHTML = ''
   const item_element = document.createElement('mize-' + render_id)
 
-	//if (!mize.update_callbacks[item_id]){mize.update_callbacks[item_id] = []}
-	mize.update_callbacks[item_id] = []
-	mize.update_callbacks[item_id].push(item_element)
+  //if (!mize.update_callbacks[item_id]){mize.update_callbacks[item_id] = []}
+  mize.update_callbacks[item_id] = []
+  mize.update_callbacks[item_id].push(item_element)
 
   mize.renders[mize.id_to_render] = {
     render_id: render_id,
@@ -140,26 +140,24 @@ async function render(render_id, item_id) {
   }
   mize_element.appendChild(item_element)
 
-	item_element.render_id = render_id
-	item_element.id = item_id
-	item_element.item = mize.items[item_id]
+  item_element.render_id = render_id
+  item_element.id = item_id
+  item_element.item = mize.items[item_id]
 
   //getItemCallback
   item_element.getItemCallback(mize.items[item_id])
-
 }
 
 class Item {
   constructor(id, raw) {
-	  //mize.Items.push(this)
+    //mize.Items.push(this)
     //raw: [["key1", "val1"]["key2", "val2"]]
     this.fields = []
     for (let field_raw of raw) {
-
-		 //don't add empty fields
-		 if (field_raw[0].length == 0){
-			 continue
-		 }
+      //don't add empty fields
+      if (field_raw[0].length == 0) {
+        continue
+      }
       this.fields.push(new Field(field_raw))
     }
     this.id = id
@@ -194,8 +192,8 @@ class Item {
   update_raw(new_item) {
     let msg_tmp = []
     let num_of_updates = 0
-	  pr("new_item", new_item.get_parsed())
-	  pr("old", this.get_parsed())
+    pr('new_item', new_item.get_parsed())
+    pr('old', this.get_parsed())
 
     for (const new_field of new_item.fields) {
       let [old_field] = this.fields.filter((old_field) =>
@@ -274,12 +272,12 @@ class Item {
       ...msg_tmp,
     ]
 
-	  if (num_of_updates == 0) {
-		  pr("empty update msg")
-		  return
-	  }
+    if (num_of_updates == 0) {
+      pr('empty update msg')
+      return
+    }
 
-	  pr("actually sending update msg", msg)
+    pr('actually sending update msg', msg)
     mize.so.send(new Uint8Array(msg))
   }
 }
@@ -525,14 +523,16 @@ async function handle_message(message) {
         i += 1
       }
 
-		//remove empty fields
-		new_item.fields = new_item.fields.filter(field => field.raw[1].length != 0)
+      //remove empty fields
+      new_item.fields = new_item.fields.filter(
+        (field) => field.raw[1].length != 0
+      )
 
-		const update = {
-          update_src: 'got_update_msg',
-          now: new_item,
-          before: mize.items[id_update],
-		}
+      const update = {
+        update_src: 'got_update_msg',
+        now: new_item,
+        before: mize.items[id_update],
+      }
 
       //update the item in the "cache"
       mize.items[id_update] = new_item
@@ -542,12 +542,11 @@ async function handle_message(message) {
         if (typeof callback == 'function') {
           callback(update)
         } else if (callback.updateCallback) {
-				callback.item = new_item
-				callback.updateCallback(update)
-
-		  } else {
-			  pr("has no updateCallback")
-				render(callback.render_id, id_update)
+          callback.item = new_item
+          callback.updateCallback(update)
+        } else {
+          pr('has no updateCallback')
+          render(callback.render_id, id_update)
         }
       })
 
@@ -642,7 +641,7 @@ function generate_parsed_item(item) {
     } else {
     }
   }
-	return object
+  return object
 }
 
 //should return something of Class Item
@@ -659,18 +658,16 @@ function unparse(parsed_item) {
 
     if (mize_type === undefined) {
       if (p_key === '_commit') {
-			//handle as u_int
+        //handle as u_int
 
         let arr_key = mize.encoder.encode(p_key)
         let arr_val = u64_to_be_bytes(p_val)
-		 	pr("undefined", p_val)
+        pr('undefined', p_val)
         item.push([arr_key, arr_val])
-
       } else {
         let arr_key = mize.encoder.encode(p_key)
         let arr_val = mize.encoder.encode(p_val)
         item.push([arr_key, arr_val])
-
       }
       continue
     }
@@ -681,7 +678,7 @@ function unparse(parsed_item) {
       let arr_key = mize.encoder.encode(p_key) // keys are always strings
       let arr_val = u64_to_be_bytes(p_val)
       item.push([arr_key, arr_val])
-		 continue
+      continue
     }
     // error because: "if(compare[1] === undefined) {"
     if (compare === undefined) {
@@ -703,10 +700,10 @@ function unparse(parsed_item) {
     } else {
     }
   }
-	//mize.id_to_render is not going to work, when we support multiple renders per client
+  //mize.id_to_render is not going to work, when we support multiple renders per client
   let newitem = new Item(mize.id_to_render, item)
 
-	pr("newitem commit", newitem.get_parsed()["_commit"])
+  pr('newitem commit', newitem.get_parsed()['_commit'])
   return newitem
 }
 
