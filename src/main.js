@@ -15,7 +15,8 @@ mize.waiting_items = {}
 mize.update_callbacks = {}
 mize.render_item = (id, pushHistory = true) => {
 	if (pushHistory){
-  		window.history.pushState({id: id}, id);
+		pr("pushing", id)
+  		window.history.pushState({id: id}, "", id);
 	}
   mize.id_to_render = id
 
@@ -68,8 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
     so.onmessage = async (message) => {
       handle_message(new Uint8Array(await message.data.arrayBuffer()))
     }
-    main(so)
+	  main()
   }
+
+	addEventListener("popstate", () => {
+		pr("popstate")
+		main()
+	})
 
   /////////////// client overlay ////////////////
   const client_overlay = document.getElementById('client-overlay')
