@@ -13,7 +13,10 @@ mize.default_renders = {}
 mize.items = {}
 mize.waiting_items = {}
 mize.update_callbacks = {}
-mize.render_item = (id) => {
+mize.render_item = (id, pushHistory = true) => {
+	if (pushHistory){
+  		window.history.pushState({id: id}, id);
+	}
   mize.id_to_render = id
 
   mize.get_item(id, (item) => {
@@ -113,7 +116,7 @@ async function main() {
     pr('id is NaN')
     id = '0'
   }
-	mize.render_item(id)
+		mize.render_item(id, false)
 }
 
 async function render(render_id, item_id) {
