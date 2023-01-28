@@ -14,10 +14,10 @@ mize.items = {}
 mize.waiting_items = {}
 mize.update_callbacks = {}
 mize.render_item = (id, pushHistory = true) => {
-	if (pushHistory){
-		pr("pushing", id)
-  		window.history.pushState({id: id}, "", id);
-	}
+  if (pushHistory) {
+    pr('pushing', id)
+    window.history.pushState({ id: id }, '', id)
+  }
   mize.id_to_render = id
 
   mize.get_item(id, (item) => {
@@ -25,10 +25,10 @@ mize.render_item = (id, pushHistory = true) => {
       (field) => mize.decoder.decode(field.raw[0]) == '_render'
     )
     if (render_id_u8) {
-	 	const render_id = mize.decoder.decode(render_id_u8.raw[1])
+      const render_id = mize.decoder.decode(render_id_u8.raw[1])
       render(render_id, item.id)
     } else {
-      render("first", item.id)
+      render('first', item.id)
     }
   })
 }
@@ -52,7 +52,7 @@ mize.get_item = (id, callback) => {
 
     //send msg to get the item
     const num_u8 = new Uint8Array([1, 15, ...mize.encoder.encode(id), 47])
-	  pr("sending", num_u8)
+    pr('sending', num_u8)
     mize.so.send(num_u8)
   }
 }
@@ -69,21 +69,21 @@ document.addEventListener('DOMContentLoaded', () => {
     so.onmessage = async (message) => {
       handle_message(new Uint8Array(await message.data.arrayBuffer()))
     }
-	  main()
+    main()
   }
 
-	addEventListener("popstate", () => {
-		pr("popstate")
-		main()
-	})
+  addEventListener('popstate', () => {
+    pr('popstate')
+    main()
+  })
 
   /////////////// client overlay ////////////////
   const client_overlay = document.getElementById('client-overlay')
-	client_overlay.style.zIndex = 999999999
-	client_overlay.childNodes[1].style.zIndex = 999999999
+  client_overlay.style.zIndex = 999999999
+  client_overlay.childNodes[1].style.zIndex = 999999999
   client_overlay.childNodes[1].onclick = mz_click
-	const overlay_menu = document.getElementById("overlay-menu")
-	overlay_menu.style.zIndex = 999999998
+  const overlay_menu = document.getElementById('overlay-menu')
+  overlay_menu.style.zIndex = 999999998
 
   for (const el of overlay_menu.childNodes[3].childNodes) {
     if (el.tagName == 'BUTTON') {
@@ -122,7 +122,7 @@ async function main() {
     pr('id is NaN')
     id = '0'
   }
-		mize.render_item(id, false)
+  mize.render_item(id, false)
 }
 
 async function render(render_id, item_id) {
@@ -286,10 +286,10 @@ class Item {
       ...msg_tmp,
     ]
 
-	  if (num_of_updates == 0) {
-		  pr("not sending an empty update msg")
-		  return
-	  }
+    if (num_of_updates == 0) {
+      pr('not sending an empty update msg')
+      return
+    }
 
     mize.so.send(new Uint8Array(msg))
   }
@@ -552,20 +552,17 @@ async function handle_message(message) {
 
       //set item on render
       mize.update_callbacks[id_update].forEach((callback) => {
-
-			if (callback.updateCallback){
-				//the callback is render obj that has a updateCallback defined
-				callback.item = new_item
-				callback.updateCallback(update)
-
-			} else if (callback.getItemCallback) {
-				//the callback is a render obj without a updateCallback
-				render(callback.render_id, id_update)
-
-			} else {
-				//the callback is a function, so call it
-				callback(update)
-			}
+        if (callback.updateCallback) {
+          //the callback is render obj that has a updateCallback defined
+          callback.item = new_item
+          callback.updateCallback(update)
+        } else if (callback.getItemCallback) {
+          //the callback is a render obj without a updateCallback
+          render(callback.render_id, id_update)
+        } else {
+          //the callback is a function, so call it
+          callback(update)
+        }
       })
 
       break
@@ -640,19 +637,15 @@ function generate_parsed_item(item) {
     if (key === '_commit') {
       let parse = from_be_bytes(field.raw[1])
       object[key] = parse
-      // if undefined return as a string
     } else if (compare === undefined) {
       let parse = val
       object[key] = parse
-      // if value is 'json_string_array'
     } else if (compare[1] === 'json_string_array') {
       let parse = JSON.parse(val)
       object[key] = parse
-      // if value is 'string'
     } else if (compare[1] === 'string') {
       let parse = val
       object[key] = parse
-      // if value is 'u_int'
     } else if (compare[1] === 'u_int') {
       let parse = from_be_bytes(field.raw[1])
       object[key] = parse
@@ -697,7 +690,7 @@ function unparse(parsed_item) {
       item.push([arr_key, arr_val])
       continue
     }
-    // error because: "if(compare[1] === undefined) {"
+
     if (compare === undefined) {
       let arr_key = mize.encoder.encode(p_key)
       let arr_val = mize.encoder.encode(p_val)
