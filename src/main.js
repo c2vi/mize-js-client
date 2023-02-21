@@ -14,10 +14,10 @@ mize.items = {}
 mize.waiting_items = {}
 mize.update_callbacks = {}
 mize.render_item = (id, pushHistory = true) => {
-	if (pushHistory){
-		pr("pushing", id)
-  		window.history.pushState({id: id}, "", id);
-	}
+  if (pushHistory) {
+    pr('pushing', id)
+    window.history.pushState({ id: id }, '', id)
+  }
   mize.id_to_render = id
 
   mize.get_item(id, (item) => {
@@ -25,10 +25,10 @@ mize.render_item = (id, pushHistory = true) => {
       (field) => mize.decoder.decode(field.raw[0]) == '_render'
     )
     if (render_id_u8) {
-	 	const render_id = mize.decoder.decode(render_id_u8.raw[1])
+      const render_id = mize.decoder.decode(render_id_u8.raw[1])
       render(render_id, item.id)
     } else {
-      render("first", item.id)
+      render('first', item.id)
     }
   })
 }
@@ -76,21 +76,21 @@ document.addEventListener('DOMContentLoaded', () => {
 		 pr(message.data)
       //handle_message(new Uint8Array(await message.data.arrayBuffer()))
     }
-	  main()
+    main()
   }
 
-	addEventListener("popstate", () => {
-		pr("popstate")
-		main()
-	})
+  addEventListener('popstate', () => {
+    pr('popstate')
+    main()
+  })
 
   /////////////// client overlay ////////////////
   const client_overlay = document.getElementById('client-overlay')
-	client_overlay.style.zIndex = 999999999
-	client_overlay.childNodes[1].style.zIndex = 999999999
+  client_overlay.style.zIndex = 999999999
+  client_overlay.childNodes[1].style.zIndex = 999999999
   client_overlay.childNodes[1].onclick = mz_click
-	const overlay_menu = document.getElementById("overlay-menu")
-	overlay_menu.style.zIndex = 999999998
+  const overlay_menu = document.getElementById('overlay-menu')
+  overlay_menu.style.zIndex = 999999998
 
   for (const el of overlay_menu.childNodes[3].childNodes) {
     if (el.tagName == 'BUTTON') {
@@ -129,7 +129,7 @@ async function main() {
     pr('id is NaN')
     id = '0'
   }
-		mize.render_item(id, false)
+  mize.render_item(id, false)
 }
 
 async function render(render_id, item_id) {
