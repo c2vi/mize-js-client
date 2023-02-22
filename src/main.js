@@ -14,21 +14,20 @@ mize.items = {}
 mize.waiting_items = {}
 mize.update_callbacks = {}
 mize.render_item = (id, pushHistory = true) => {
-  if (pushHistory) {
-    pr('pushing', id)
-    window.history.pushState({ id: id }, '', id)
-  }
+	if (pushHistory){
+		pr("pushing", id)
+  		window.history.pushState({id: id}, "", id);
+	}
   mize.id_to_render = id
 
   mize.get_item(id, (item) => {
-    const [render_id_u8] = item.fields.filter(
-      (field) => mize.decoder.decode(field.raw[0]) == '_render'
+    const [render_id] = Object.keys(item).filter(
+      field => field == "_render"
     )
-    if (render_id_u8) {
-      const render_id = mize.decoder.decode(render_id_u8.raw[1])
-      render(render_id, item.id)
+    if (render_id) {
+      render(render_id, id)
     } else {
-      render('first', item.id)
+      render("mmejs", id)
     }
   })
 }
@@ -52,12 +51,13 @@ mize.get_item = (id, callback) => {
     mize.waiting_items[id] = [callback]
 
     //send msg to get the item
-    mize.so.send(JSON.stringify({cat: "item", msg: "get", id}))
+	  let msg = JSON.stringify({cat: "item", cmd: "get", id: String(id)})
+    mize.so.send(msg)
   }
 }
 
 mize.create_item = (item, callback) => {
-	mize.so.send(JSON.stringify({cat: "item", msg: "create", item}))
+	mize.so.send(JSON.stringify({cat: "item", cmd: "create", item}))
 }
 
 mize.update_item = (item, new_item) => {
@@ -73,24 +73,22 @@ document.addEventListener('DOMContentLoaded', () => {
   mize.so = so
   so.onopen = () => {
     so.onmessage = async (message) => {
-		 pr(message.data)
-      //handle_message(new Uint8Array(await message.data.arrayBuffer()))
+      handle_message(message)
     }
-    main()
+	  main()
   }
 
-  addEventListener('popstate', () => {
-    pr('popstate')
-    main()
-  })
+	addEventListener("popstate", () => {
+		main()
+	})
 
   /////////////// client overlay ////////////////
   const client_overlay = document.getElementById('client-overlay')
-  client_overlay.style.zIndex = 999999999
-  client_overlay.childNodes[1].style.zIndex = 999999999
+	client_overlay.style.zIndex = 999999999
+	client_overlay.childNodes[1].style.zIndex = 999999999
   client_overlay.childNodes[1].onclick = mz_click
-  const overlay_menu = document.getElementById('overlay-menu')
-  overlay_menu.style.zIndex = 999999998
+	const overlay_menu = document.getElementById("overlay-menu")
+	overlay_menu.style.zIndex = 999999998
 
   for (const el of overlay_menu.childNodes[3].childNodes) {
     if (el.tagName == 'BUTTON') {
@@ -129,7 +127,7 @@ async function main() {
     pr('id is NaN')
     id = '0'
   }
-  mize.render_item(id, false)
+		mize.render_item(id, false)
 }
 
 async function render(render_id, item_id) {
@@ -172,12 +170,11 @@ async function render(render_id, item_id) {
 }
 
 async function handle_message(message) {
-	const msg = JSON.parse(message.text)
-	pr("MESSAGE", msg)
+	const msg = JSON.parse(message.data)
 
 	switch (msg.cat) {
 		case "item":
-			handle_item_msg(msg)
+			handle_item_msg(msg) 
 			break;
 
 		case "error":
@@ -194,20 +191,23 @@ async function handle_item_msg(msg){
 
 	switch (msg.cmd) {
 		case "give":
+			//add the item to the "cache"
+			mize.items[msg.id] = msg.item
+
+
 			//set item on render
 			mize.waiting_items[msg.id].forEach((callback) => {
 			  if (callback.getItemCallback) {
-				 callback.getItemCallback(msg.item)
+				 callback.getItemCallback("hellooooooooooooooooooo")
 			  } else {
 				 callback(msg.item)
 			  }
 			})
 
-			//add the item to the "cache"
-			mize.items[id_string] = msg.item
 			break;
+
 		case "update":
-			pr("go updtae msg")
+			pr("got updtae msg")
 
 			const old_item = mize.items[msg.id]
 			const new_item = old_item.clone().apply_delta(update.delta)
@@ -241,7 +241,7 @@ async function handle_item_msg(msg){
 			break;
 
 		default:
-			pr("unhandeld cmd", msg.cmd)
+			pr("unhandeld msg", msg.msg)
 			break;
 	}
 }
