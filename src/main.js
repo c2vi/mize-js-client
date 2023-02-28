@@ -22,12 +22,12 @@ mize.render_item = (id, pushHistory = true) => {
 
   mize.get_item(id, (item) => {
     const [render_id] = Object.keys(item).filter(
-      field => field == "_render"
+      field => field == "render"
     )
     if (render_id) {
       render(render_id, id)
     } else {
-      render("mmejs", id)
+      render("mize-mmejs-foldermain", id)
     }
   })
 }
@@ -61,6 +61,10 @@ mize.create_item = (item, callback) => {
 }
 
 mize.update_item = (item, new_item) => {
+	pr("doing update")
+	pr("OLD", item)
+	pr("NEW", new_item)
+
 }
 
 mize.types = {}
@@ -69,7 +73,7 @@ mize.define_type = (type, definition) => {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const so = new WebSocket('ws://' + location.host + '/==api==/socket')
+  const so = new WebSocket('ws://' + location.host + '/api/socket')
   mize.so = so
   so.onopen = () => {
     so.onmessage = async (message) => {
@@ -135,21 +139,23 @@ async function render(render_id, item_id) {
   let render_class = mize.render_classes[render_id]
   if (render_class == undefined) {
     //get render
-    //let res = await fetch('/==api==/render/' + render_id)
+    //let res = await fetch('/api/render/' + render_id)
     //let script = await res.text()
     //eval(script)
 
-    await import('/==api==/render/' + render_id)
+	  pr("HEREEEEEEEEEE")
+    await import('/api/render/' + render_id)
 
-    render_class = mize.new_render
-    mize.render_classes[render_id] = { ob: render_class }
+    //render_class = mize.new_render
+    //mize.render_classes[render_id] = { ob: render_class }
 
-    customElements.define('mize-' + render_id, render_class)
+	  //customElements.define(render_id, render_class)
   }
 
   const mize_element = document.getElementById('mize')
   mize_element.innerHTML = ''
-  const item_element = document.createElement('mize-' + render_id)
+  const item_element = document.createElement(render_id)
+	pr("item ele", item_element.name)
 
   //if (!mize.update_callbacks[item_id]){mize.update_callbacks[item_id] = []}
   mize.update_callbacks[item_id] = []
