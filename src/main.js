@@ -113,6 +113,7 @@ json_ui.render_recursive = async (el, html_el, par_el) => {
 }
 
 json_ui.render_webcomponent = async (parent_el, json_ui_el) => {
+	pr("webcomponent", parent_el, json_ui_el)
 		const render_id = json_ui_el["render-id"]
 
 		if (!customElements.get(render_id)) {
@@ -207,33 +208,32 @@ mize.create_item = (item, callback) => {
 }
 
 mize.get_delta = (old_item, new_item) => {
-	//pr("OLD:", old_item)
-	//pr("NEW:", new_item)
+
 	let deltas = []
-	let keys = Object.keys(old_item.data).concat(Object.keys(new_item.data))
+	let keys = Object.keys(old_item.main).concat(Object.keys(new_item.main))
 	keys = keys.filter((item, pos) => keys.indexOf(item) === pos)
 
 	//go through all keys in new_item and remove all that are the same in old_item
 	keys.forEach((key) => {
 		//pr("AT KEY:", key)
 
-		if (!old_item.data[key]) {
+		if (!old_item.main[key]) {
 			// if key is not found on old_item it must have been added
 			//pr("added")
-			deltas.push([[key], new_item.data[key]])
+			deltas.push([[key], new_item.main[key]])
 
-		} else if (!new_item.data[key]) {
+		} else if (!new_item.main[key]) {
 			// if key is not found on new_item it must have been deleted
 			//pr("deleted")
 			deltas.push([[key]])
 
-		} else if (typeof new_item.data[key] == "object") {
+		} else if (typeof new_item.main[key] == "object") {
 			// if values are the same, or are objects call recursivly on inner objects
 			//pr("object")
-			inner_deltas = mize.get_delta(old_item.data[key], new_item.data[key])
+			inner_deltas = mize.get_delta(old_item.main[key], new_item.main[key])
 
 			//if object is an Array, then convert the keys to numbers
-			if (Array.isArray(new_item.data[key])) {
+			if (Array.isArray(new_item.main[key])) {
 				inner_deltas.forEach(change => {
 					let path = change[0]
 					path[0] = Number(path[0])
@@ -250,10 +250,10 @@ mize.get_delta = (old_item, new_item) => {
 			//and add to deltas
 			deltas.push(...inner_deltas)
 
-		} else if (o.datald_item[key] !== new_item.data[key]) {
+		} else if (old_item.main[key] !== new_item.main[key]) {
 			//values are different 
 			//pr("different")
-			deltas.push([[key], new_item.data[key]])
+			deltas.push([[key], new_item.main[key]])
 
 		} else {
 			//values are the same
@@ -261,6 +261,9 @@ mize.get_delta = (old_item, new_item) => {
 		}
 	})
 
+	pr("OLD:", old_item)
+	pr("NEW:", new_item)
+	pr("Delta:", deltas)
 	return deltas
 }
 
@@ -271,9 +274,9 @@ mize.update_item = (update) => {
 	old_item = mize.items[update.id]
 	new_item = update.new_item
 
-	pr("OLD:", mize.items[update.id])
-	pr("NEW:", update.new_item)
-	pr("id:", update.id)
+	//pr("OLD:", mize.items[update.id])
+	//pr("NEW:", update.new_item)
+	//pr("id:", update.id)
 
 	//call all update_callbacks
 	mize.update_callbacks[update.id].forEach((callback) => {
@@ -286,9 +289,10 @@ mize.update_item = (update) => {
 		} else if (callback.getItemCallback) {
 			//the callback is a render obj without a updateCallback
 			pr("rerendering component because it does not have a updateCallback")
+			pr("in update callbacks", callback, callback.parentElement)
+			const par_el = callback.parentElement
 			callback.parentElement.innerHTML = ""
-			pr(callback.parentElement)
-			json_ui.render_webcomponent(callback.parentElement, callback.json_ui_el)
+			json_ui.render_webcomponent(par_el, callback.json_ui_el)
 
 		} else if (typeof callback == "function") {
 			//the callback is a function, so call it
@@ -388,7 +392,7 @@ async function main() {
 
 
 async function handle_message(message) {
-	const msg = JSON.parse(message.data)
+	const msg = JSON.parse(message.main)
 
 	switch (msg.cmd) {
 		case "item.give":
@@ -409,9 +413,6 @@ async function handle_message(message) {
 			break;
 
 		case "item.update":
-
-			pr("got updtae msg")
-
 			const old_item = mize.items[msg.id]
 			const new_item = old_item.clone().apply_delta(msg.delta)
 
@@ -428,10 +429,10 @@ async function handle_message(message) {
 }
 
 class Item{
-	constructor(data){
-		this.data = data
-		this.id = data.__item__
-		pr("constructor", data.__item__)
+	constructor(main){
+		this.main = main
+		this.id = main.__item__
+		pr("constructor", main.__item__)
 	}
 
 	on_update(func){
@@ -443,17 +444,28 @@ class Item{
 	}
 
 	update(func){
-		let new_item = func(this.clone())
+		let new_item = new Item(func(this.clone().main))
 		pr("update", new_item)
-		mize.update_item({new_item, update_src: "from component"})
+		mize.update_item({new_item, update_src: "from_component"})
 	}
 
 	apply_delta(delta){
-		pr("applying delta")
+		delta.forEach( change => {
+			const path = change[0]
+			const new_val = change[1]
+			let old_val = this.main
+			path.forEach( path_el => {
+				if (!old_val[path_el]) {
+					old_val[path_el] = {}
+				}
+				old_val = old_val[path_el]
+			})
+			old_val = new_val
+		})
 	}
 
 	clone(){
-		return new Item(mize.deepClone(this.data));
+		return new Item(mize.deepClone(this.main));
 	}
 
 }
