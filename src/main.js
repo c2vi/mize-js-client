@@ -211,11 +211,11 @@ mize.await_update = async (path_or_list, expected) => {
 	for (let [path, expected] of paths_and_expected) {
 
 		let promise = new Promise((resolve, reject) => {
-			mize.add_update_callback((update) => {
+			mize.add_update_callback(path[0], (update) => {
 				if (mize.deepEq(update.new_item.get_path(path), expected)) {
 					resolve()
 				}
-			}, path[0])
+			})
 		})
 		promise_list.push(promise)
 	}
@@ -352,7 +352,7 @@ mize.get_delta = (old_item, new_item) => {
 	return deltas
 }
 
-mize.add_update_callback = (callback, id) => {
+mize.add_update_callback = (id, callback) => {
 	if (!mize.update_callbacks[id]) mize.update_callbacks[id] = []
 	mize.update_callbacks[id].push(callback)
 }
@@ -559,15 +559,15 @@ async function handle_message(message) {
 	}
 }
 
-class Item{
+class Item {
 	constructor(main){
 		this.is_item = () => true
 		this.main = main
 		this.id = main.__item__
 
-		mize.add_update_callback(update => {
+		mize.add_update_callback(this.id, update => {
 			this.main = update.new_item.main
-		}, this.id)
+		})
 	}
 
 	on_update(func){
